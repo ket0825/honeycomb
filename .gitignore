@@ -1,0 +1,20 @@
+.vscode/
+Lib/
+Scripts/
+Include/
+pyvenv.cfg
+*.json
+api_call/*
+reviews/*
+product_detail_location/*
+product_images/*
+*.png
+*.jpg
+.env
+
+# Windows에서 생성되는 파일 및 디렉토리 무시
+*.pyc
+__pycache__/
+venv/
+*.pyo
+*.zip
