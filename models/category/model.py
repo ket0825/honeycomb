@@ -11,3 +11,15 @@ class Category(Base):
     url = mapped_column(VARCHAR(1000), nullable=False)
     s_topics = mapped_column(JSON, nullable=True)
     m_topics = mapped_column(JSON, nullable=True)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'caid': self.caid,
+            's_category': self.s_category,
+            'm_category': self.m_category,
+            'url': self.url,
+            's_topics': self.s_topics,
+            'm_topics': self.m_topics
+        }
+

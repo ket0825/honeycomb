@@ -1,7 +1,7 @@
 from flask import Flask, request
 from database import db_session
 from database import init_db
-from models.category.route import preview_route
+from models.category.route import category_route
 app = Flask(__name__)
 
 # request를 마친 후 session을 닫아버리게 만듦.
@@ -9,7 +9,7 @@ app = Flask(__name__)
 def shutdown_session(exception=None):
     db_session.remove()
 
-app.register_blueprint(preview_route)
+app.register_blueprint(category_route)
 
 if __name__ == '__main__':
     init_db()
