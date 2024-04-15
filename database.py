@@ -6,7 +6,7 @@ from sqlalchemy.orm import declarative_base
 
 
 engine = create_engine(f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_URL}:{DB_PORT}/{DB_NAME}",
-                                    pool_size=5, max_overflow=10, echo=True, )
+                       query_cache_size=1200, pool_size=5, max_overflow=10, echo=True, )
 # connection pool 관련.
 """https://spoqa.github.io/2018/01/17/connection-pool-of-sqlalchemy.html"""
 # Base 애들 create_all로 engine을 이용하여 전부 생성.
