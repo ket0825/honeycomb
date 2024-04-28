@@ -2,7 +2,9 @@ from flask import Flask, request
 from database import db_session
 from database import init_db
 from models.category.route import category_route
+from models.product.route import product_route
 app = Flask(__name__)
+# 현재 Review TABLE이 만들어져있지 않음.
 
 # request를 마친 후 session을 닫아버리게 만듦.
 @app.teardown_request
@@ -10,6 +12,7 @@ def shutdown_session(exception=None):
     db_session.remove()
 
 app.register_blueprint(category_route)
+app.register_blueprint(product_route)
 
 if __name__ == '__main__':
     init_db()
