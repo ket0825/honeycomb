@@ -1,16 +1,21 @@
-from sqlalchemy import Integer, CHAR, VARCHAR, TIMESTAMP, FLOAT, JSON
+from sqlalchemy import Integer, CHAR, VARCHAR, TIMESTAMP, FLOAT, JSON, UniqueConstraint
 from sqlalchemy.orm import mapped_column
 from database import Base
 
 class Category(Base):
     __tablename__ = 'category'
     id = mapped_column(Integer, primary_key=True) # autoincrement.
-    caid = mapped_column(CHAR(10), nullable=False) # base36, C0..
+    type = mapped_column(CHAR(3), nullable=False) # C.
+    caid = mapped_column(CHAR(10), nullable=True) # base36, C0..
     s_category = mapped_column(VARCHAR(30), nullable=False)
     m_category = mapped_column(VARCHAR(30), nullable=False)
     url = mapped_column(VARCHAR(1000), nullable=False)
     s_topics = mapped_column(JSON, nullable=True)
     m_topics = mapped_column(JSON, nullable=True)
+
+    __table_args__ = (
+        UniqueConstraint('type', 'id', 's_category', name='uq_type_id_s_category'),
+    )
 
     def to_dict(self):
         return {
