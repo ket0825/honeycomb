@@ -5,6 +5,7 @@ from sqlalchemy import select, insert, update, delete, and_, or_
 from sqlalchemy.dialects.mysql import insert as mysql_insert
 from sqlalchemy import Table, func
 from models.product.model import Product
+from models.product_history.model import ProductHistory
 from models.category.model import Category
 from ..util.util import base10_to_base36, base36_to_base10, custom_response, print_debug_msg, batch_generator
 from datetime import datetime
@@ -13,7 +14,6 @@ from sqlalchemy.orm import lazyload
 import re
 
 product_route = Blueprint('product_route', __name__)
-match_nv_mid_ptrn = re.compile(r'nvMid=(\d+)')
 
 # Use query string at s_category and m_category.
 # Use path parameter at caid.
@@ -23,10 +23,10 @@ def select_all(prid):
     try:
         stmt = select(Product)
         if prid:
-            stmt = stmt.where(Product.prid.ilike(f"%{prid}%"))                    
+            stmt = stmt.where(Product.prid==prid)                    
         elif 'name' in request.args.keys():
             name = request.args.get('name') 
-            stmt = stmt.where(Product.name.ilike(f"%{name}%"))
+            stmt = stmt.where(Product.name==name)
                         
         res = db_session.execute(stmt).scalars().all()        
         db_session.commit()
@@ -60,24 +60,23 @@ def upsert_match():
         for packet in packets.get('items'):
             # packet validation
             if (not isinstance(packet, dict) 
-                or not packet.get('grade') # empty string is False.
-                or not packet.get('review_count') # empty string is False.
                 or not isinstance(packet.get('review_count'), int)
                 or not isinstance(packet.get('url'), str) 
-                or not isinstance(packet.get('grade'), float)
+                or not isinstance(packet.get('grade'), (float, int))
                 or not isinstance(packet.get('name'), str) 
                 or not isinstance(packet.get('lowest_price'), int)
+                or not isinstance(packet.get('match_nv_mid'), str)
             ):
                 print_debug_msg(current_app.debug, f"Invalid packet: {packet}", f"Invalid packet")
                 continue            
             
             packet['caid'] = caid
-            packet['match_nv_mid'] = match_nv_mid_ptrn.search(packet.get('url')).group(1)
+
             packet['type'] = type
 
             select_prid_stmt = select(Product.prid).where(Product.caid==caid, 
                                         or_(Product.match_nv_mid==packet['match_nv_mid'], 
-                                            Product.name.ilike(f"%{packet['name']}%")))
+                                            Product.name.ilike(f"{packet['name']}")))
             prid_exist = db_session.execute(select_prid_stmt).scalar_one_or_none()
 
             if prid_exist:
@@ -103,37 +102,7 @@ def upsert_match():
                     db_session.commit()
                 else:
                     db_session.rollback()
-                    print_debug_msg(current_app.debug, f"Fail to insert: {packet}", f"Fail to insert")        
-                        
-            
-
-        # for packets in batch_generator(data, 10):            
-        #     stmt = mysql_insert(Product).values(packets)
-        #     upsert_stmt = stmt.on_duplicate_key_update(
-        #         grade=stmt.inserted.grade,
-        #         name=stmt.inserted.name,
-        #         lowest_price=stmt.inserted.lowest_price,
-        #         review_count=stmt.inserted.review_count
-        #     )
-            
-        #     result = db_session.execute(upsert_stmt)
-
-        #     inserted_ids = result.inserted_primary_key
-
-        #     if inserted_ids[0]:
-        #         print_debug_msg(current_app.debug, f"Inserted ids: {inserted_ids}", f"Inserted ids")
-        #         prid_start = inserted_ids[0]
-        #         prid_end = inserted_ids[-1] + 1
-
-        #         for record_id, prid in zip(inserted_ids, range(prid_start, prid_end)):
-        #             prid_value = base10_to_base36(prid)
-        #             db_session.query(Product).filter_by(id=record_id).update({'prid': prid_value})
-        #         # for id in inserted_ids:
-        #         #     prid_value = base10_to_base36(id)
-        #         #     update_stmt = update(Product).where(Product.id==id).values(prid=prid_value)
-        #         #     db_session.execute(update_stmt)
-            
-        #     db_session.commit()
+                    print_debug_msg(current_app.debug, f"Fail to insert: {packet}", f"Fail to insert")                                               
         
         return custom_response(current_app.debug, f"[SUCCESS] Success!", f"Success!", 200)
 
@@ -143,14 +112,68 @@ def upsert_match():
     finally:
         db_session.remove()        
     
-"""
-Upsert product at detail page.
-(Only brand, maker, naver_spec ,seller_spec, image_urls)
-"""
-@product_route.route('/api/product/detail', methods=['POST'])
-def upsert_detail():
+
+@product_route.route('/api/product/detail/one', methods=['POST'])
+def update_detail_one():
+    """
+    [SINGLE PACKET] Update product at detail page.
+
+    For brand, maker, naver_spec ,seller_spec, image_urls.
+
+    But, if product could be changed at the time, then update all fields.
+
+    ex) {} [SINGLE PACKET]
+    """
     try:
-       pass
+        packet = request.get_json()
+        
+        prid = packet.get('prid')
+        caid = packet.get('caid')
+        prid_validate = prid[0] == 'P' and (0 <= int(prid[1]) <= 9)
+        caid_validate = caid[0] == 'C' and (0 <= int(caid[1]) <= 9)
+        if not prid_validate or not caid_validate:
+            return custom_response(current_app.debug, f"[ERROR] Invalid packet: {packet}", f"Fail!", 400)
+
+        update_stmt = update(Product).where(
+            and_(Product.prid==prid, Product.caid==caid)
+        ).values( 
+            grade = packet.get('grade'),            
+            name = packet.get('name'),
+            lowest_price = packet.get('lowest_price'),
+            review_count = packet.get('review_count'),
+            url = packet.get('url'),
+            brand=packet.get('brand'),
+            maker=packet.get('maker'),
+            naver_spec=packet.get('naver_spec'),
+            seller_spec=packet.get('seller_spec'),
+            detail_image_urls=packet.get('detail_image_urls')            
+        )
+        db_session.execute(update_stmt)
+
+        # Insert history
+        select_prod_hist = select(ProductHistory).where(ProductHistory.prid==prid).order_by(ProductHistory.timestamp.desc()).limit(1)
+        last_hist = db_session.execute(select_prod_hist).scalar_one_or_none()
+        
+        if (not last_hist  # if there is no history
+            or last_hist.grade != packet.get('grade')  # if there is any changes
+            or last_hist.lowest_price != packet.get('lowest_price') 
+            or last_hist.review_count != packet.get('review_count')
+            ):
+            insert_stmt = insert(ProductHistory).values(
+                caid=caid,
+                prid=prid,
+                review_count=packet.get('review_count'),
+                grade=packet.get('grade'),
+                lowest_price=packet.get('lowest_price'),
+                timestamp=datetime.now()
+            )
+            db_session.execute(insert_stmt)
+        else:
+            db_session.commit()
+            return custom_response(current_app.debug, f"[SUCCESS] No changes: {packet}", f"[SUCCESS] No changes", 201)
+        
+        db_session.commit()       
+        return custom_response(current_app.debug, f"[SUCCESS] Success!", f"Success!", 200)
     except Exception as e:
         db_session.rollback()
         return custom_response(current_app.debug, f"[ERROR] {e}", f"Fail!", 400)
