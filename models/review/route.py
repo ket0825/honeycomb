@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify, Response, current_app
 from database import db_session, metadata_obj, engine
 
-from sqlalchemy import select, insert, update, delete, and_, or_
+from sqlalchemy import select, insert, update, delete, and_, or_, bindparam
 from sqlalchemy.dialects.mysql import insert as mysql_insert
 from sqlalchemy import Table, func
 from models.product.model import Product
@@ -14,6 +14,7 @@ from sqlalchemy.orm import lazyload
 import re
 
 review_route = Blueprint('review_route', __name__)
+BATCH_SIZE = 20
 
 # Use query string at s_category and m_category.
 # Use path parameter at caid.
@@ -41,141 +42,131 @@ def select_all(reid):
 
 """
 Upsert product overview at the first crawling
-(Only id, caid, prid, url, grade, name, lowest_price, review_count)
 """
-@review_route.route('/api/product', methods=['POST'])
+@review_route.route('/api/review', methods=['POST'])
 #TODO: 각 packet마다 prid, caid, type 추가해야 함. 예시 packets 만들어야 함.
-def upsert_review():
-    # bulk upsert 불가능. 이유는 autoincrement id => prid로 변환하는 과정이 필요하기 때문.
+#TODO: Needs packets logic.
+def upsert_review_batch():    
     try:
         packets = request.get_json()
         type = packets.get('type')
         assert type.startswith("R") and (0 <= int(type[1]) <= 9)
         
+        # if prid is not given, then use match_nv_mid to find prid.
+        prid = packets.get('prid')
+        if not prid:
+            match_nv_mid = packets.get('match_nv_mid')
+            prid_stmt = select(Product.prid).where(Product.match_nv_mid==match_nv_mid)
+            prid = db_session.execute(prid_stmt).scalar_one()
+
         caid_stmt = select(Category.caid).where(Category.s_category==packets.get('category'))
-        caid = db_session.execute(caid_stmt).scalar_one()
-        
-        for packet in packets.get('items'):
+        caid = db_session.execute(caid_stmt).scalar_one()        
+
+        reviews = []
+
+        # packet validation and reformatting
+        for review in packets.get('reviews'):                        
             # packet validation
-            if (not isinstance(packet, dict) 
-                or not isinstance(packet.get('review_count'), int)
-                or not isinstance(packet.get('url'), str) 
-                or not isinstance(packet.get('grade'), (float, int))
-                or not isinstance(packet.get('name'), str) 
-                or not isinstance(packet.get('lowest_price'), int)
-                or not isinstance(packet.get('match_nv_mid'), str)
+            if (not isinstance(review, dict) 
+                or not isinstance(review.get('id'), str) 
+                or not isinstance(review.get('aidaModifyTime'), str)
+                or not isinstance(review.get('matchNvMid'), str)
+                or not isinstance(review.get('nvMid'), str)
+                or not isinstance(review.get('qualityScore'), (float, int))
+                or not isinstance(review.get('starScore'), int) 
             ):
-                print_debug_msg(current_app.debug, f"Invalid packet: {packet}", f"Invalid packet")
+                print_debug_msg(current_app.debug, f"Invalid packet: {review}", f"Invalid packet")
                 continue            
-            
-            packet['caid'] = caid
+            # packet reformatting. Later, it will be used for insert.
+            # TODO: crawler should provide these fields.
+            packet = {
+                'type': type,
+                'prid': prid,
+                'caid': caid,
+                'content': review.get('content'),
+                'our_topics' : review.get('our_topics') if review.get('our_topics') else [],
+                'n_review_id' : review.get('id'),
+                'quality_score' : review.get('qualityScore'),
+                'buy_option' : review.get('buyOption'),
+                'star_score' : review.get('starScore'),
+                'topic_count' : review.get('topicCount'),
+                'topic_yn' : review.get('topicYn'),
+                'topics' : review.get('topics'),
+                'user_id' : review.get('userId'),
+                'aida_modify_time':review.get('aidaModifyTime'),
+                'mall_id':review.get('mallId'),
+                'mall_seq':review.get('mallSeq'),
+                'mall_name':review.get('mallName'),
+                'match_nv_mid':match_nv_mid,
+                'nv_mid':review.get('nvMid'),
+                'image_urls':review.get('imageUrls') if review.get('imageUrls') else [],
+            }
 
-            packet['type'] = type
+            reviews.append(packet)
+        
+        # check exists.        
+        select_stmt = select(Review.n_review_id).where(Review.n_review_id.in_([review.get('n_review_id') for review in reviews]))
+        exists = db_session.execute(select_stmt).scalars().all()
 
-            select_prid_stmt = select(Product.prid).where(Product.caid==caid, 
-                                        or_(Product.match_nv_mid==packet['match_nv_mid'], 
-                                            Product.name.ilike(f"{packet['name']}")))
-            prid_exist = db_session.execute(select_prid_stmt).scalar_one_or_none()
+        for review_batch in batch_generator(reviews, BATCH_SIZE): # batch size
+            # insert or update
+            insert_batch = [review for review in review_batch if review.get('n_review_id') not in exists]
 
-            if prid_exist:
-                update_stmt = update(Product).where(
-                    and_(Product.prid==prid_exist, Product.caid==caid)
-                    ).values(
-                        name=packet['name'], 
-                        lowest_price=packet['lowest_price'], 
-                        review_count=packet['review_count'],
-                        match_nv_mid=packet['match_nv_mid'],
-                        grade=packet['grade']
+            # TODO: update_batch should check data same or not.
+            update_batch = [review for review in review_batch if review.get('n_review_id') in exists]
+
+            if insert_batch:
+                insert_stmt = insert(Review).values(insert_batch)
+                db_session.execute(insert_stmt)    
+
+                inserted_id_type = db_session.execute(
+                    select(Review.id, Review.type).where(
+                        Review.n_review_id.in_([row.get('n_review_id') for row in insert_batch])
                         )
-                db_session.execute(update_stmt)
+                    ).all()
+
+
+                update_reid = [
+                    {
+                    "id_val": id,
+                    "type": type,
+                    "reid": type+base10_to_base36(id)
+                    } 
+                    for id, type in inserted_id_type]
+
+                update_stmt = update(Review).where(
+                    Review.id == bindparam('id_val')).values(reid=bindparam('reid'))    # not id, id_val should be used.
+                db_session.connection().execute(update_stmt, update_reid) # For batch update, use connection.
+                db_session.commit()            
+                print_debug_msg(current_app.debug, f"[SUCCESS] Insert {insert_batch} batch", f"[SUCCESS] Insert {len(insert_batch)} batch")
+            
+            if update_batch:
+                update_stmt = update(Review).where(
+                    Review.n_review_id == bindparam('n_review_id_val')).values(
+                        aida_modify_time=bindparam('aida_modify_time'),
+                        content=bindparam('content'),
+                        our_topics=bindparam('our_topics'),
+                        quality_score=bindparam('quality_score'),
+                        star_score=bindparam('star_score'),
+                        topic_count=bindparam('topic_count'),
+                        topic_yn=bindparam('topic_yn'),
+                        topics=bindparam('topics'),
+                        nv_mid=bindparam('nv_mid'),
+                        image_urls=bindparam('image_urls')                    
+                    )
+                
+                for row in update_batch: # for batch update, need to reformat.
+                    row['n_review_id_val'] = row.pop('n_review_id')                
+                
+                db_session.connection().execute(update_stmt, update_batch) # for batch update, use connection.
                 db_session.commit()
-            else:                          
-                insert_stmt = insert(Product).values(packet)
-                result = db_session.execute(insert_stmt)
-                inserted_ids = result.inserted_primary_key
-                if inserted_ids[0]:
-                    prid = packet.get('type') + base10_to_base36(inserted_ids[0])
-                    update_prid = update(Product).where(Product.id==inserted_ids[0]).values(prid=prid)
-                    db_session.execute(update_prid)
-                    db_session.commit()
-                else:
-                    db_session.rollback()
-                    print_debug_msg(current_app.debug, f"Fail to insert: {packet}", f"Fail to insert")                                               
+                print_debug_msg(current_app.debug, f"[SUCCESS] Update {update_batch} batch", f"[SUCCESS] Update {len(update_batch)} batch")
+            
+        return custom_response(current_app.debug, f"[SUCCESS] Insert and Update batch: {len(reviews)}", f"[SUCCESS] Insert and Update batch: {len(reviews)}", 200)
         
-        return custom_response(current_app.debug, f"[SUCCESS] Success!", f"Success!", 200)
 
     except Exception as e:
         db_session.rollback()
         return custom_response(current_app.debug, f"[ERROR] {e}", f"Fail!", 400)
     finally:
         db_session.remove()        
-    
-
-@review_route.route('/api/product/detail/one', methods=['POST'])
-def update_detail_one():
-    """
-    [SINGLE PACKET] Update product at detail page.
-
-    For brand, maker, naver_spec ,seller_spec, image_urls.
-
-    But, if product could be changed at the time, then update all fields.
-
-    ex) {} [SINGLE PACKET]
-    """
-    try:
-        packet = request.get_json()
-        
-        prid = packet.get('prid')
-        caid = packet.get('caid')
-        prid_validate = prid[0] == 'P' and (0 <= int(prid[1]) <= 9)
-        caid_validate = caid[0] == 'C' and (0 <= int(caid[1]) <= 9)
-        if not prid_validate or not caid_validate:
-            return custom_response(current_app.debug, f"[ERROR] Invalid packet: {packet}", f"Fail!", 400)
-
-        update_stmt = update(Product).where(
-            and_(Product.prid==prid, Product.caid==caid)
-        ).values( 
-            grade = packet.get('grade'),            
-            name = packet.get('name'),
-            lowest_price = packet.get('lowest_price'),
-            review_count = packet.get('review_count'),
-            url = packet.get('url'),
-            brand=packet.get('brand'),
-            maker=packet.get('maker'),
-            naver_spec=packet.get('naver_spec'),
-            seller_spec=packet.get('seller_spec'),
-            detail_image_urls=packet.get('detail_image_urls')            
-        )
-        db_session.execute(update_stmt)
-
-        # Insert history
-        select_prod_hist = select(ProductHistory).where(ProductHistory.prid==prid).order_by(ProductHistory.timestamp.desc()).limit(1)
-        last_hist = db_session.execute(select_prod_hist).scalar_one_or_none()
-        
-        if (not last_hist  # if there is no history
-            or last_hist.grade != packet.get('grade')  # if there is any changes
-            or last_hist.lowest_price != packet.get('lowest_price') 
-            or last_hist.review_count != packet.get('review_count')
-            ):
-            insert_stmt = insert(ProductHistory).values(
-                caid=caid,
-                prid=prid,
-                review_count=packet.get('review_count'),
-                grade=packet.get('grade'),
-                lowest_price=packet.get('lowest_price'),
-                timestamp=datetime.now()
-            )
-            db_session.execute(insert_stmt)
-        else:
-            db_session.commit()
-            return custom_response(current_app.debug, f"[SUCCESS] No changes: {packet}", f"[SUCCESS] No changes", 201)
-        
-        db_session.commit()       
-        return custom_response(current_app.debug, f"[SUCCESS] Success!", f"Success!", 200)
-    except Exception as e:
-        db_session.rollback()
-        return custom_response(current_app.debug, f"[ERROR] {e}", f"Fail!", 400)
-    finally:
-        db_session.remove()        
-    
-
