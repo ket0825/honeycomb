@@ -4,6 +4,7 @@ from database import init_db
 from models.category.route import category_route
 from models.product.route import product_route
 from models.review.route import review_route
+from models.ip.route import ip_route
 app = Flask(__name__)
 # 현재 Review TABLE이 만들어져있지 않음.
 
@@ -15,6 +16,7 @@ def shutdown_session(exception=None):
 app.register_blueprint(category_route)
 app.register_blueprint(product_route)
 app.register_blueprint(review_route)
+app.register_blueprint(ip_route)
 
 if __name__ == '__main__':
     init_db()
