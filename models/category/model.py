@@ -1,4 +1,4 @@
-from sqlalchemy import Integer, CHAR, VARCHAR, TIMESTAMP, FLOAT, JSON, UniqueConstraint
+from sqlalchemy import Integer, CHAR, VARCHAR, TIMESTAMP, FLOAT, JSON, UniqueConstraint, Index
 from sqlalchemy.orm import mapped_column
 from database import Base
 
@@ -15,6 +15,8 @@ class Category(Base):
 
     __table_args__ = (
         UniqueConstraint('type', 'id', 's_category', name='uq_type_id_s_category'),
+        Index('ix_s_category', 's_category'),
+        Index('ix_caid', 'caid'),
     )
 
     def to_dict(self):

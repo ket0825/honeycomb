@@ -1,4 +1,4 @@
-from sqlalchemy import Integer, CHAR, VARCHAR, TIMESTAMP, FLOAT, JSON, UniqueConstraint
+from sqlalchemy import Integer, CHAR, VARCHAR, TIMESTAMP, FLOAT, JSON, UniqueConstraint, Index
 from sqlalchemy.orm import mapped_column
 from database import Base
 
@@ -10,8 +10,8 @@ class Review(Base):
     caid = mapped_column(CHAR(10), nullable=False) # base36, C0..
     reid = mapped_column(CHAR(10), nullable=True) # base36, R0..
     content = mapped_column(VARCHAR(2000), nullable=False)
-    # our topics mapped_column.JSON, nullable=True)
-    our_topics = mapped_column(JSON, nullable=True)
+    # our_topics = mapped_column(JSON, nullable=True),
+    our_topics_yn = mapped_column(CHAR(1), nullable=False)
     n_review_id = mapped_column(VARCHAR(100), nullable=False)
     quality_score = mapped_column(FLOAT(precision=5, decimal_return_scale=5), nullable=False)
     buy_option = mapped_column(VARCHAR(100), nullable=True)
@@ -19,7 +19,7 @@ class Review(Base):
     topic_count = mapped_column(Integer, nullable=False)
     topic_yn = mapped_column(CHAR(1), nullable=False)
     topics = mapped_column(JSON, nullable=True)
-    user_id = mapped_column(CHAR(20), nullable=False, unique=True)
+    user_id = mapped_column(CHAR(20), nullable=False)
     aida_modify_time = mapped_column(TIMESTAMP(timezone=True), nullable=False)
     mall_id = mapped_column(VARCHAR(30), nullable=False)
     mall_seq = mapped_column(VARCHAR(30), nullable=False)
@@ -30,6 +30,10 @@ class Review(Base):
 
     __table_args__ = (
         UniqueConstraint('type', 'id', 'prid', name='uq_review_type_id_prid'),
+        Index('ix_prid', 'prid'),  # prid (aggregate 목적)
+        Index('ix_caid', 'caid'), # caid (aggregate 목적)
+        Index('ix_reid', 'reid'), # reid (검색 key 목적)
+        Index('ix_our_topics_yn', 'our_topics_yn'), # our_topics_yn (aggregate 목적)        
     )
 
     def to_dict(self):

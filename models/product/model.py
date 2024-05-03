@@ -1,4 +1,4 @@
-from sqlalchemy import Integer, CHAR, VARCHAR, TIMESTAMP, FLOAT, JSON, UniqueConstraint
+from sqlalchemy import Integer, CHAR, VARCHAR, TIMESTAMP, FLOAT, JSON, UniqueConstraint, Index, func, desc, asc
 from sqlalchemy.orm import mapped_column
 from database import Base
 
@@ -24,6 +24,14 @@ class Product(Base):
     
     __table_args__ = (
         UniqueConstraint('type', 'id', 'match_nv_mid', name='uq_product_prid_match_nv_mid'),
+        Index('ix_caid', 'caid'), # caid (내부 검색 key)
+        Index('ix_match_nv_mid', 'match_nv_mid'), # match_nv_mid (내부 검색 key)
+        Index('ix_prid', 'prid'),  # prid (내부 검색 key)
+        Index('ix_grade', 'grade'), # grade (정렬 목적)
+        Index('ix_name', asc(name)), # name (검색 및 정렬 목적)
+        Index('ix_lowest_price', "lowest_price"), # lowest_price (정렬 목적)
+        Index('ix_review_count', 'review_count'), # review_count (정렬 목적)
+        Index('ix_brand', 'brand'), # brand (검색 및 그룹화 목적)
     )
 
 
