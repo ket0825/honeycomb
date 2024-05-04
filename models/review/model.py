@@ -29,11 +29,11 @@ class Review(Base):
     image_urls = mapped_column(JSON, nullable=False)
 
     __table_args__ = (
-        UniqueConstraint('type', 'id', 'prid', name='uq_review_type_id_prid'),
+        UniqueConstraint('type', 'id', name='uq_review_type_id'),
         Index('ix_prid', 'prid'),  # prid (aggregate 목적)
-        Index('ix_caid', 'caid'), # caid (aggregate 목적)
+        # Index('ix_caid', 'caid'), # caid (aggregate 목적)
         Index('ix_reid', 'reid'), # reid (검색 key 목적)
-        Index('ix_our_topics_yn', 'our_topics_yn'), # our_topics_yn (aggregate 목적)        
+        # Index('ix_our_topics_yn', 'our_topics_yn'), # our_topics_yn (aggregate 목적)        
     )
 
     def to_dict(self):

@@ -20,7 +20,7 @@ class Topic(Base):
     sentiment_scale = mapped_column(Integer, nullable=False) # topic sentiment scale  
 
     __table_args__ = (
-        UniqueConstraint('type', 'id', 'reid', name='uq_review_type_id_reid'),
+        UniqueConstraint('type', 'id', name='uq_topic_type_id'),
         # At production level. It should be indexed.
         Index('ix_reid', 'reid'), # reid (검색 key 목적)
         Index('ix_topic_code', 'topic_code', 'topic_score'), # topic_code (검색 key와 점수 목적)
