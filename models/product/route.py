@@ -74,6 +74,7 @@ def upsert_match():
 
             packet['type'] = type
 
+            # if match_nv_mid or name is already exist and caid is same, then update.
             select_prid_stmt = select(Product.prid).where(Product.caid==caid, 
                                         or_(Product.match_nv_mid==packet['match_nv_mid'], 
                                             Product.name.ilike(f"{packet['name']}")))
@@ -91,6 +92,7 @@ def upsert_match():
                         )
                 db_session.execute(update_stmt)
                 db_session.commit()
+                print_debug_msg(current_app.debug, f"Update: {packet}", f"Update")
             else:                          
                 insert_stmt = insert(Product).values(packet)
                 result = db_session.execute(insert_stmt)
@@ -100,6 +102,7 @@ def upsert_match():
                     update_prid = update(Product).where(Product.id==inserted_ids[0]).values(prid=prid)
                     db_session.execute(update_prid)
                     db_session.commit()
+                    print_debug_msg(current_app.debug, f"Insert: {packet}", f"Insert")
                 else:
                     db_session.rollback()
                     print_debug_msg(current_app.debug, f"Fail to insert: {packet}", f"Fail to insert")                                               
@@ -149,11 +152,13 @@ def update_detail_one():
             detail_image_urls=packet.get('detail_image_urls')            
         )
         db_session.execute(update_stmt)
+        
 
         # Insert history
         select_prod_hist = select(ProductHistory).where(ProductHistory.prid==prid).order_by(ProductHistory.timestamp.desc()).limit(1)
         last_hist = db_session.execute(select_prod_hist).scalar_one_or_none()
         
+        data_updated = False
         if (not last_hist  # if there is no history
             or last_hist.grade != packet.get('grade')  # if there is any changes
             or last_hist.lowest_price != packet.get('lowest_price') 
@@ -167,13 +172,17 @@ def update_detail_one():
                 lowest_price=packet.get('lowest_price'),
                 timestamp=datetime.now()
             )
+            data_updated = True
             db_session.execute(insert_stmt)
-        else:
-            db_session.commit()
-            return custom_response(current_app.debug, f"[SUCCESS] No changes: {packet}", f"[SUCCESS] No changes", 201)
+                
+        db_session.commit()
+        print_debug_msg(current_app.debug, f"Update: {packet}", f"Update")        
         
-        db_session.commit()       
-        return custom_response(current_app.debug, f"[SUCCESS] Success!", f"Success!", 200)
+        if data_updated:
+            print_debug_msg(current_app.debug, f"Data Updated: {data_updated}", f"Data_updated: {data_updated}")
+            return custom_response(current_app.debug, f"[SUCCESS] History updated: {data_updated}", f"[SUCCESS] History updated: {data_updated}", 201)
+        else:
+            return custom_response(current_app.debug, f"[SUCCESS] Update packet: {packet}", f"[SUCCESS] Update packet", 201)
     except Exception as e:
         db_session.rollback()
         return custom_response(current_app.debug, f"[ERROR] {e}", f"Fail!", 400)

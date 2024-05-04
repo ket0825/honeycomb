@@ -1,4 +1,4 @@
-from sqlalchemy import Integer, CHAR, VARCHAR, TIMESTAMP, FLOAT, JSON, UniqueConstraint, Index
+from sqlalchemy import Integer, CHAR, VARCHAR, TIMESTAMP, FLOAT, JSON, UniqueConstraint, Index, desc
 from sqlalchemy.orm import mapped_column
 from database import Base
 
@@ -16,7 +16,7 @@ class ProductHistory(Base):
         UniqueConstraint('prid','timestamp', name='uq_prod_hist_prid_timestamp'),
         Index('ix_prid', 'prid'),  # prid (aggregate 목적)
         Index('ix_caid', 'caid'), # caid (aggregate 목적) 
-        Index('ix_timestamp', 'timestamp'), # review_count (aggregate 목적)  
+        Index('ix_timestamp', desc(timestamp)), # review_count (aggregate 목적)  
     )
     
     def to_dict(self):

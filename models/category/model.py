@@ -14,7 +14,7 @@ class Category(Base):
     m_topics = mapped_column(JSON, nullable=True)
 
     __table_args__ = (
-        UniqueConstraint('type', 'id', 's_category', name='uq_type_id_s_category'),
+        UniqueConstraint('type', 'id', name='uq_type_id'),
         Index('ix_s_category', 's_category'),
         Index('ix_caid', 'caid'),
     )
