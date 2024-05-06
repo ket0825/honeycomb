@@ -40,6 +40,7 @@ def select_topic_by_reid(reid):
         
     except Exception as e:
         db_session.rollback()
+        print_debug_msg(current_app.debug, f"[ERROR] {e}", f"Fail!")
         return custom_response(current_app.debug, f"[ERROR] {e}", f"Fail!", 500)
     finally:
         db_session.remove()            

@@ -66,7 +66,8 @@ def select_all(caid):
         
     except Exception as e:
         db_session.rollback()
-        return custom_response(current_app.debug, f"[ERROR] {e}", f"Fail!", 400)        
+        print_debug_msg(current_app.debug, f"[ERROR] {e}", f"Fail!")
+        return custom_response(current_app.debug, f"[ERROR] Fail", f"Fail!", 400)        
     finally:
         db_session.remove()
 
@@ -121,12 +122,15 @@ def upsert_one():
             db_session.commit()
         
         if data_change:
+            print_debug_msg(current_app.debug, f"[SUCCESS] Update and insert: {len(packets)}", f"[SUCCESS] Update and insert")
             return custom_response(current_app.debug, f"[SUCCESS] Update and insert: {len(packets)}", f"[SUCCESS] Update and insert", 201)                                           
         else:
+            print_debug_msg(current_app.debug, f"[SUCCESS] Update and insert: {len(packets)}", f"[SUCCESS] Update and insert")
             return custom_response(current_app.debug, f"[SUCCESS] Insert: {len(packets)}", f"[SUCCESS] Insert", 201)                                           
 
     except Exception as e:
         db_session.rollback()
+        print_debug_msg(current_app.debug, f"[SUCCESS] Update and insert: {len(packets)}", f"[SUCCESS] Update and insert")
         return custom_response(current_app.debug, f"[ERROR] {e}", f"Fail!", 400)        
     finally:
         db_session.remove()

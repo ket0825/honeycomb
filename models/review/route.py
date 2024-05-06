@@ -39,6 +39,7 @@ def select_all(m_category):
         
     except Exception as e:
         db_session.rollback()
+        print_debug_msg(current_app.debug, f"[ERROR] {e}", f"Fail!")
         return custom_response(current_app.debug, f"[ERROR] {e}", f"Fail!", 500)
     finally:
         db_session.remove()            
@@ -227,7 +228,8 @@ def upsert_review_batch():
                     db_session.commit()
                     print_debug_msg(current_app.debug, f"[SUCCESS] Insert {topic_batch[0]} to {topic_batch[-1]} batch", f"[SUCCESS] Insert {len(our_topics)} batch")
                     
-            
+
+        print_debug_msg(current_app.debug, f"[SUCCESS] Insert and Update batch: {len(reviews)}", f"[SUCCESS]")    
         return custom_response(current_app.debug, f"[SUCCESS] Insert and Update batch: {len(reviews)}", f"[SUCCESS] Insert and Update batch: {len(reviews)}", 200)
         
 

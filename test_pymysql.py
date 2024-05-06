@@ -1,10 +1,10 @@
 import pymysql
 import traceback
-from settings import DB_NAME, DB_PASSWORD, DB_PORT, DB_USER, DB_URL
+from settings import DB_NAME, DB_PASSWORD, DB_PORT, DB_USER, DB_HOST
 
 try:
     conn = pymysql.connect(
-            host=DB_URL,            # 접속할 mysql server의 주소
+            host=DB_HOST,            # 접속할 mysql server의 주소
             port=DB_PORT,        # 접속할 mysql server의 포트 번호
             user=DB_USER,     
             passwd=DB_PASSWORD,
