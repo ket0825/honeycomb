@@ -5,7 +5,7 @@ from sqlalchemy import select, insert, update, delete, and_, or_
 from sqlalchemy.dialects.mysql import insert as mysql_insert
 from sqlalchemy import Table, func
 from models.ip.model import IP
-from ..util.util import base10_to_base36, base36_to_base10, custom_response, print_debug_msg, batch_generator
+from ..util.util import base10_to_base36, base36_to_base10, custom_response, log_debug_msg, batch_generator
 from datetime import datetime
 from sqlalchemy.orm import Mapper
 from sqlalchemy.orm import lazyload
@@ -28,7 +28,7 @@ def select_one():
                     
     except Exception as e:
         db_session.rollback()
-        print_debug_msg(current_app.debug, f"[ERROR] {e}", f"Fail!")
+        log_debug_msg(current_app.debug, f"[ERROR] {e}", f"Fail!")
         return custom_response(current_app.debug, f"[ERROR] {e}", f"Fail!", 500)
     finally:
         db_session.remove()            
@@ -51,14 +51,14 @@ def upsert_batch():
                 or not isinstance(packet.get('user_agent'), str) 
                 or not isinstance(packet.get('naver'), str)
             ):                
-                print_debug_msg(current_app.debug, f"Invalid packet: {packet}", f"Invalid packet")
+                log_debug_msg(current_app.debug, f"Invalid packet: {packet}", f"Invalid packet")
                 continue            
             
             res = db_session.execute(select(IP).where(IP.address==packet.get('address'))).scalar_one_or_none()           
             
             # address 중복 체크
             if packet.get('address') in address_list:
-                print_debug_msg(current_app.debug, f"Duplicate packet: {packet}", f"Duplicate packet")
+                log_debug_msg(current_app.debug, f"Duplicate packet: {packet}", f"Duplicate packet")
                 continue
             # address가 존재하면 update, 없으면 insert
             if res:                

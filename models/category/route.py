@@ -4,7 +4,7 @@ from sqlalchemy import select, insert, update, delete, and_
 from sqlalchemy.dialects.mysql import insert as mysql_insert
 from sqlalchemy import Table, func
 from models.category.model import Category
-from ..util.util import base10_to_base36, base36_to_base10, custom_response, print_debug_msg
+from ..util.util import base10_to_base36, base36_to_base10, custom_response, log_debug_msg
 from datetime import datetime
 from sqlalchemy.orm import Mapper
 from sqlalchemy.orm import lazyload
@@ -57,7 +57,8 @@ def select_all(caid):
             stmt = stmt.where(Category.m_category.ilike(f"%{category}%"))
         
         res = db_session.execute(stmt).scalars().all()
-        
+                
+        log_debug_msg(current_app.debug, f"[SUCCESS] {len(res)}", f"[SUCCESS] {len(res)}")
         db_session.commit()
         if res:
             return jsonify([row.to_dict() for row in res])
@@ -66,7 +67,7 @@ def select_all(caid):
         
     except Exception as e:
         db_session.rollback()
-        print_debug_msg(current_app.debug, f"[ERROR] {e}", f"Fail!")
+        log_debug_msg(current_app.debug, f"[ERROR] {e}", f"Fail!")
         return custom_response(current_app.debug, f"[ERROR] Fail", f"Fail!", 400)        
     finally:
         db_session.remove()
@@ -117,20 +118,20 @@ def upsert_one():
                     update_stmt = update(Category).where(Category.id==inserted_id[0]).values(caid=caid)
                     db_session.execute(update_stmt)              
                 else:
-                    print_debug_msg(current_app.debug, f"[FAIL] insert: {packet}", f"[FAIL] insert")
+                    log_debug_msg(current_app.debug, f"[FAIL] insert: {packet}", f"[FAIL] insert")
 
             db_session.commit()
         
         if data_change:
-            print_debug_msg(current_app.debug, f"[SUCCESS] Update and insert: {len(packets)}", f"[SUCCESS] Update and insert")
+            log_debug_msg(current_app.debug, f"[SUCCESS] Update and insert: {len(packets)}", f"[SUCCESS] Update and insert")
             return custom_response(current_app.debug, f"[SUCCESS] Update and insert: {len(packets)}", f"[SUCCESS] Update and insert", 201)                                           
         else:
-            print_debug_msg(current_app.debug, f"[SUCCESS] Update and insert: {len(packets)}", f"[SUCCESS] Update and insert")
+            log_debug_msg(current_app.debug, f"[SUCCESS] Update and insert: {len(packets)}", f"[SUCCESS] Update and insert")
             return custom_response(current_app.debug, f"[SUCCESS] Insert: {len(packets)}", f"[SUCCESS] Insert", 201)                                           
 
     except Exception as e:
         db_session.rollback()
-        print_debug_msg(current_app.debug, f"[SUCCESS] Update and insert: {len(packets)}", f"[SUCCESS] Update and insert")
+        log_debug_msg(current_app.debug, f"[SUCCESS] Update and insert: {len(packets)}", f"[SUCCESS] Update and insert")
         return custom_response(current_app.debug, f"[ERROR] {e}", f"Fail!", 400)        
     finally:
         db_session.remove()

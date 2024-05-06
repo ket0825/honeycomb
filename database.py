@@ -4,15 +4,9 @@ from settings import DB_NAME, DB_PASSWORD, DB_PORT, DB_USER, DB_HOST
 from sqlalchemy import MetaData
 from sqlalchemy.orm import declarative_base
 
+engine = create_engine(f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}",
+                    query_cache_size=1200, pool_size=5, max_overflow=10, echo=True, pool_recycle=3600, pool_timeout=30)
 
-# print(f"DB_NAME: {DB_NAME}")
-# print(f"DB_PORT: {DB_PORT}")
-# print(f"DB_USER: {DB_USER}")
-# print(f"DB_HOST: {DB_HOST}")
-# print(f"DB_PASSWORD: {DB_PASSWORD}")
-
-engine = create_engine(f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@db:{DB_PORT}/{DB_NAME}",
-                       query_cache_size=1200, pool_size=5, max_overflow=10, echo=True, pool_recycle=3600, pool_timeout=30)
 # connection pool 관련.
 """https://spoqa.github.io/2018/01/17/connection-pool-of-sqlalchemy.html"""
 # Base 애들 create_all로 engine을 이용하여 전부 생성.

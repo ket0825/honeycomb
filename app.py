@@ -25,7 +25,6 @@ CORS(app, resources={r"/api/*": {"origins": "*"}})
 def shutdown_session(exception=None):
     db_session.remove()
 
-
 app.register_blueprint(category_route)
 app.register_blueprint(product_route)
 app.register_blueprint(review_route)

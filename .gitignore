@@ -11,6 +11,7 @@ product_images/*
 *.png
 *.jpg
 .env
+log/
 
 # Windows에서 생성되는 파일 및 디렉토리 무시
 *.pyc

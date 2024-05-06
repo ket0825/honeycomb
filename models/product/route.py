@@ -7,7 +7,7 @@ from sqlalchemy import Table, func
 from models.product.model import Product
 from models.product_history.model import ProductHistory
 from models.category.model import Category
-from ..util.util import base10_to_base36, base36_to_base10, custom_response, print_debug_msg, batch_generator
+from ..util.util import base10_to_base36, base36_to_base10, custom_response, log_debug_msg, batch_generator
 from datetime import datetime
 from sqlalchemy.orm import Mapper
 from sqlalchemy.orm import lazyload
@@ -67,7 +67,7 @@ def upsert_match():
                 or not isinstance(packet.get('lowest_price'), int)
                 or not isinstance(packet.get('match_nv_mid'), str)
             ):
-                print_debug_msg(current_app.debug, f"Invalid packet: {packet}", f"Invalid packet")
+                log_debug_msg(current_app.debug, f"Invalid packet: {packet}", f"Invalid packet")
                 continue            
             
             packet['caid'] = caid
@@ -92,7 +92,7 @@ def upsert_match():
                         )
                 db_session.execute(update_stmt)
                 db_session.commit()
-                print_debug_msg(current_app.debug, f"Update: {packet}", f"Update")
+                log_debug_msg(current_app.debug, f"Update: {packet}", f"Update")
             else:                          
                 insert_stmt = insert(Product).values(packet)
                 result = db_session.execute(insert_stmt)
@@ -102,10 +102,10 @@ def upsert_match():
                     update_prid = update(Product).where(Product.id==inserted_ids[0]).values(prid=prid)
                     db_session.execute(update_prid)
                     db_session.commit()
-                    print_debug_msg(current_app.debug, f"Insert: {packet}", f"Insert")
+                    log_debug_msg(current_app.debug, f"Insert: {packet}", f"Insert")
                 else:
                     db_session.rollback()
-                    print_debug_msg(current_app.debug, f"Fail to insert: {packet}", f"Fail to insert")                                               
+                    log_debug_msg(current_app.debug, f"Fail to insert: {packet}", f"Fail to insert")                                               
         
         return custom_response(current_app.debug, f"[SUCCESS] Success!", f"Success!", 200)
 
@@ -176,10 +176,10 @@ def update_detail_one():
             db_session.execute(insert_stmt)
                 
         db_session.commit()
-        print_debug_msg(current_app.debug, f"Update: {packet}", f"Update")        
+        log_debug_msg(current_app.debug, f"Update: {packet}", f"Update")        
         
         if data_updated:
-            print_debug_msg(current_app.debug, f"Data Updated: {data_updated}", f"Data_updated: {data_updated}")
+            log_debug_msg(current_app.debug, f"Data Updated: {data_updated}", f"Data_updated: {data_updated}")
             return custom_response(current_app.debug, f"[SUCCESS] History updated: {data_updated}", f"[SUCCESS] History updated: {data_updated}", 201)
         else:
             return custom_response(current_app.debug, f"[SUCCESS] Update packet: {packet}", f"[SUCCESS] Update packet", 201)

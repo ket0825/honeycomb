@@ -8,7 +8,7 @@ from models.product.model import Product
 from models.review.model import Review
 from models.category.model import Category
 from models.topic.model import Topic
-from ..util.util import base10_to_base36, base36_to_base10, custom_response, print_debug_msg, batch_generator
+from ..util.util import base10_to_base36, base36_to_base10, custom_response, log_debug_msg, batch_generator
 from datetime import datetime
 from sqlalchemy.orm import Mapper
 from sqlalchemy.orm import lazyload
@@ -39,7 +39,7 @@ def select_all(m_category):
         
     except Exception as e:
         db_session.rollback()
-        print_debug_msg(current_app.debug, f"[ERROR] {e}", f"Fail!")
+        log_debug_msg(current_app.debug, f"[ERROR] {e}", f"Fail!")
         return custom_response(current_app.debug, f"[ERROR] {e}", f"Fail!", 500)
     finally:
         db_session.remove()            
@@ -80,7 +80,7 @@ def upsert_review_batch():
                 or not isinstance(review.get('qualityScore'), (float, int))
                 or not isinstance(review.get('starScore'), int) 
             ):
-                print_debug_msg(current_app.debug, f"Invalid packet: {review}", f"Invalid packet")
+                log_debug_msg(current_app.debug, f"Invalid packet: {review}", f"Invalid packet")
                 continue            
             # packet reformatting. Later, it will be used for insert.
             # TODO: crawler should provide these fields.
@@ -183,7 +183,7 @@ def upsert_review_batch():
                         our_topics.append(our_topic)                                             
 
                 db_session.commit()            
-                print_debug_msg(current_app.debug, f"[SUCCESS] Insert {insert_batch} batch", f"[SUCCESS] Insert {len(insert_batch)} batch")
+                log_debug_msg(current_app.debug, f"[SUCCESS] Insert {insert_batch} batch", f"[SUCCESS] Insert {len(insert_batch)} batch")
             
             if update_batch:
                 update_stmt = update(Review).where(
@@ -210,7 +210,7 @@ def upsert_review_batch():
                 
                 db_session.connection().execute(update_stmt, update_batch) # for batch update, use connection.
                 db_session.commit()
-                print_debug_msg(current_app.debug, f"[SUCCESS] Update {update_batch} batch", f"[SUCCESS] Update {len(update_batch)} batch")
+                log_debug_msg(current_app.debug, f"[SUCCESS] Update {update_batch} batch", f"[SUCCESS] Update {len(update_batch)} batch")
 
             if our_topics:
                 # for performance, batch insert and don't Update 
@@ -226,10 +226,10 @@ def upsert_review_batch():
                     insert_stmt = insert(Topic).values(topic_batch)
                     db_session.execute(insert_stmt)    
                     db_session.commit()
-                    print_debug_msg(current_app.debug, f"[SUCCESS] Insert {topic_batch[0]} to {topic_batch[-1]} batch", f"[SUCCESS] Insert {len(our_topics)} batch")
+                    log_debug_msg(current_app.debug, f"[SUCCESS] Insert {topic_batch[0]} to {topic_batch[-1]} batch", f"[SUCCESS] Insert {len(our_topics)} batch")
                     
 
-        print_debug_msg(current_app.debug, f"[SUCCESS] Insert and Update batch: {len(reviews)}", f"[SUCCESS]")    
+        log_debug_msg(current_app.debug, f"[SUCCESS] Insert and Update batch: {len(reviews)}", f"[SUCCESS]")    
         return custom_response(current_app.debug, f"[SUCCESS] Insert and Update batch: {len(reviews)}", f"[SUCCESS] Insert and Update batch: {len(reviews)}", 200)
         
 

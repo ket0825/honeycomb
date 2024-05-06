@@ -5,7 +5,7 @@ from sqlalchemy import select, insert, update, delete, and_, or_, bindparam, des
 from sqlalchemy.dialects.mysql import insert as mysql_insert
 from sqlalchemy import Table, func
 from models.product_history.model import ProductHistory
-from ..util.util import base10_to_base36, base36_to_base10, custom_response, print_debug_msg, batch_generator
+from ..util.util import base10_to_base36, base36_to_base10, custom_response, log_debug_msg, batch_generator
 from datetime import datetime
 from sqlalchemy.orm import Mapper
 from sqlalchemy.orm import lazyload
@@ -36,7 +36,7 @@ def select_product_history():
         
     except Exception as e:
         db_session.rollback()
-        print_debug_msg(current_app.debug, f"[ERROR] {e}", f"Fail!")
+        log_debug_msg(current_app.debug, f"[ERROR] {e}", f"Fail!")
         return custom_response(current_app.debug, f"[ERROR] {e}", f"Fail!", 500)
     finally:
         db_session.remove()            
