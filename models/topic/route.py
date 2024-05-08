@@ -23,12 +23,27 @@ BATCH_SIZE = 20
 def select_topic_by_reid(reid):
     try:
         stmt = select(Topic).where(Topic.reid==reid)                    
+        if "caid" in request.args.keys():
+            caid = request.args.get('caid')
+            stmt = stmt.join(Review, Review.reid==Topic.reid).where(Review.caid==caid)
+        if "prid" in request.args.keys():
+            prid = request.args.get('prid')
+            stmt = stmt.join(Review, Review.reid==Topic.reid).where(Review.prid==prid)
+        if "prid" in request.args.keys():
+            prid = request.args.get('prid')
+            stmt = stmt.where(Topic.prid==prid)
         if 'topic_code' in request.args.keys():
             topic_code = request.args.get('topic_code') 
             stmt = stmt.where(Topic.topic_code==topic_code)    # for aggregation
+        if 'topic_code' in request.args.keys():
+            topic_code = request.args.get('topic_code') 
+            stmt = stmt.where(Topic.topic_code==topic_code)        
         if 'type' in request.args.keys():
             type = request.args.get('type')
             stmt = stmt.where(Topic.type==type)
+        if 'positive_yn' in request.args.keys():
+            positive_yn = request.args.get('positive_yn')
+            stmt = stmt.where(Topic.positive_yn==positive_yn)
         if 'sentiment_scale' in request.args.keys():
             sentiment_scale = request.args.get('sentiment_scale')
             stmt = stmt.where(Topic.sentiment_scale==sentiment_scale)

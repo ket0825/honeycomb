@@ -20,10 +20,10 @@ BATCH_SIZE = 20
 # Use query string at s_category and m_category.
 # Use path parameter at caid.
 
-@review_route.route('/api/review/<m_category>', methods=['GET'])
-def select_all(m_category):
+@review_route.route('/api/review/<caid>', methods=['GET'])
+def select_all(caid):
     try:        
-        stmt = select(Review).join(Category, Review.caid==Category.caid).where(Category.m_category==m_category)
+        stmt = select(Review).where(Review.caid==caid)
             
         if 'prid' in request.args.keys():
             prid = request.args.get('prid') 

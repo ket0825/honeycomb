@@ -17,7 +17,8 @@ class Topic(Base):
     start_position = mapped_column(Integer, nullable=False)
     end_position = mapped_column(Integer, nullable=False)
     positive_yn = mapped_column(CHAR(1), nullable=False) # topic sentiment (Y, N)
-    sentiment_scale = mapped_column(Integer, nullable=False) # topic sentiment scale  
+    sentiment_scale = mapped_column(Integer, nullable=False) # topic sentiment scale
+
 
     __table_args__ = (
         UniqueConstraint('type', 'id', name='uq_topic_type_id'),
@@ -27,10 +28,8 @@ class Topic(Base):
         Index('ix_sentiment', 'positive_yn', 'sentiment_scale')  # sentiment (검색 key와 점수 목적)
     )
 
-    
-
     def to_dict(self):
-        return {
+        return{
             'id': self.id,
             'type': self.type,
             'tpid': self.tpid,
@@ -41,6 +40,6 @@ class Topic(Base):
             'topic_score': self.topic_score,
             'start_position': self.start_position,
             'end_position': self.end_position,
-            'topic_sentiment': self.positive_yn,
-            'topic_sentiment_score': self.sentiment_scale
+            'positive_yn': self.positive_yn,
+            'sentiment_scale': self.sentiment_scale
         }
