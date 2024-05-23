@@ -48,6 +48,7 @@ class Product(Base):
             'brand': self.brand,
             'maker': self.maker,
             'naver_spec': self.naver_spec,
+            "match_nv_mid": self.match_nv_mid,
             'seller_spec': self.seller_spec,
             'detail_image_urls': self.detail_image_urls
         }

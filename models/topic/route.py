@@ -17,18 +17,49 @@ import re
 topic_route = Blueprint('topic_route', __name__)
 BATCH_SIZE = 20
 
-# Use query string at topic_code and type and topic_sentiment.
-# Use path parameter at reid.
-@topic_route.route('/api/topic/<reid>', methods=['GET'])
-def select_topic_by_reid(reid):
+# Use query string at topic_code and type and topic_sentiment...
+# Type should be provided with the prefix of "OT" or "RT" at query string.
+@topic_route.route('/api/topic', methods=['GET'])
+def select_topic_by_type():
     try:
-        stmt = select(Topic).where(Topic.reid==reid)                    
+        if 'type' in request.args.keys():
+            type = request.args.get('type')
+            stmt = select(Topic).where(Topic.type==type)
+        else:
+            return custom_response(current_app.debug, f"[ERROR] {e}", f"Fail!", 500)
+
+        if type.startswith("OT"):
+            # prid 찾기 위함. OCR Topic 위함.
+            if "prid" in request.args.keys():
+                prid = request.args.get('prid')
+                stmt = stmt.where(Topic.prid==prid)
+        elif type.startswith("RT"):
+            if "reid" in request.args.keys():
+                reid = request.args.get('reid')
+                stmt = stmt.where(Topic.reid==reid)
+            if "caid" in request.args.keys():
+                caid = request.args.get('caid')
+                stmt = stmt.join(Review, Review.reid==Topic.reid).where(Review.caid==caid)
+            if "prid" in request.args.keys():
+                prid = request.args.get('prid')
+                stmt = stmt.join(Review, Review.reid==Topic.reid).where(Review.prid==prid)
+        
+        # No more type.
+        else:
+            return custom_response(current_app.debug, f"[ERROR] {e}", f"Fail!", 500)
+
         if 'topic_code' in request.args.keys():
             topic_code = request.args.get('topic_code') 
             stmt = stmt.where(Topic.topic_code==topic_code)    # for aggregation
+        if 'topic_score' in request.args.keys():
+            topic_code = request.args.get('topic_code') 
+            stmt = stmt.where(Topic.topic_code==topic_code)        
         if 'type' in request.args.keys():
             type = request.args.get('type')
             stmt = stmt.where(Topic.type==type)
+        if 'positive_yn' in request.args.keys():
+            positive_yn = request.args.get('positive_yn')
+            stmt = stmt.where(Topic.positive_yn==positive_yn)
         if 'sentiment_scale' in request.args.keys():
             sentiment_scale = request.args.get('sentiment_scale')
             stmt = stmt.where(Topic.sentiment_scale==sentiment_scale)
@@ -43,4 +74,4 @@ def select_topic_by_reid(reid):
         log_debug_msg(current_app.debug, f"[ERROR] {e}", f"Fail!")
         return custom_response(current_app.debug, f"[ERROR] {e}", f"Fail!", 500)
     finally:
-        db_session.remove()            
+        db_session.remove()                  

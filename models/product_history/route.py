@@ -25,8 +25,8 @@ def select_product_history():
         if 'prid' in request.args.keys():
             prid = request.args.get('prid')
             stmt = stmt.where(ProductHistory.prid==prid)    # for aggregation            
-        if 'timestamp_count' in request.args.keys():
-            timestamp_count = request.args.get('timestamp_count')
+        if 'count_desc' in request.args.keys():
+            timestamp_count = request.args.get('count_desc')
             stmt = stmt.order_by(desc(ProductHistory.timestamp)).limit(timestamp_count)    # for aggregation            
                         
         res = db_session.execute(stmt).scalars().all()        

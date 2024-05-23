@@ -1,6 +1,6 @@
 import sys
 import os
-
+# TODO: Change prid, caid, reid to varchar(10) in models.
 from flask import Flask
 from flask_cors import CORS
 from database import db_session
@@ -43,3 +43,4 @@ if __name__ == '__main__':
     app.run(port=port_num)
     # app.run(debug=True)
     # app.run(host='0.0.0.0') # 외부 접근 가능. public IP.
+    

@@ -9,7 +9,7 @@ class Review(Base):
     prid = mapped_column(CHAR(10), nullable=False) # base36, P0..
     caid = mapped_column(CHAR(10), nullable=False) # base36, C0..
     reid = mapped_column(CHAR(10), nullable=True) # base36, R0..
-    content = mapped_column(VARCHAR(2000), nullable=False)
+    content = mapped_column(VARCHAR(10000), nullable=False)
     # our_topics = mapped_column(JSON, nullable=True),
     our_topics_yn = mapped_column(CHAR(1), nullable=False)
     n_review_id = mapped_column(VARCHAR(100), nullable=False)
@@ -23,7 +23,7 @@ class Review(Base):
     aida_modify_time = mapped_column(TIMESTAMP(timezone=True), nullable=False)
     mall_id = mapped_column(VARCHAR(30), nullable=False)
     mall_seq = mapped_column(VARCHAR(30), nullable=False)
-    mall_name = mapped_column(VARCHAR(50), nullable=False)
+    mall_name = mapped_column(VARCHAR(50), nullable=True)
     match_nv_mid = mapped_column(VARCHAR(30), nullable=False)    
     nv_mid = mapped_column(VARCHAR(30), nullable=False)
     image_urls = mapped_column(JSON, nullable=False)
