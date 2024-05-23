@@ -60,6 +60,7 @@ def select_all(caid):
                 
         log_debug_msg(current_app.debug, f"[SUCCESS] {len(res)}", f"[SUCCESS] {len(res)}")
         db_session.commit()
+        
         if res:
             return jsonify([row.to_dict() for row in res])
         else:

@@ -12,7 +12,7 @@ from ..util.util import base10_to_base36, base36_to_base10, custom_response, log
 from datetime import datetime
 from sqlalchemy.orm import Mapper
 from sqlalchemy.orm import lazyload
-import re
+from settings import topic_name_to_code
 
 review_route = Blueprint('review_route', __name__)
 BATCH_SIZE = 20
@@ -58,14 +58,19 @@ def upsert_review_batch():
         assert type.startswith("R") and (0 <= int(type[1]) <= 9)
         
         # if prid is not given, then use match_nv_mid to find prid.
+        match_nv_mid = packets.get('match_nv_mid')
         prid = packets.get('prid')
-        if not prid:
-            match_nv_mid = packets.get('match_nv_mid')
-            prid_stmt = select(Product.prid).where(Product.match_nv_mid==match_nv_mid)
-            prid = db_session.execute(prid_stmt).scalar_one()
+        s_category = packets.get('category')
 
-        caid_stmt = select(Category.caid).where(Category.s_category==packets.get('category'))
-        caid = db_session.execute(caid_stmt).scalar_one()        
+        if not prid and not s_category:
+            prid_caid_stmt = select(Product.prid, Product.caid).where(Product.match_nv_mid==match_nv_mid)
+            res = db_session.execute(prid_caid_stmt).all()
+            prid, caid = res[0]
+        elif not prid:
+            prid = db_session.execute(select(Product.prid).where(Product.match_nv_mid==match_nv_mid)).scalar()
+            caid = db_session.execute(select(Category.caid).where(Category.s_category==s_category)).scalar()
+        elif not s_category:
+            caid = db_session.execute(select(Product.caid).where(Product.prid==prid)).scalar()
 
         reviews = []
 
@@ -125,7 +130,6 @@ def upsert_review_batch():
             for row in update_batch:
                 row['reid'] = exists.get(row.get('n_review_id'))
             
-
             our_topics = []
             reid_set = set()
 
@@ -179,6 +183,13 @@ def upsert_review_batch():
                     reid = reid_obj.get('reid')                                                                
                     reid_set.add(reid)
                     for our_topic in review.get('our_topics'):                        
+                        if (our_topic.get('text') == "" 
+                            or our_topic.get('topic') == ""
+                            or our_topic.get('end_pos') == 0
+                            or our_topic.get('positive_yn') == ""     
+                            or not our_topic.get('topic_score') 
+                            ):
+                            continue
                         our_topic['reid'] = reid
                         our_topics.append(our_topic)                                             
 
@@ -203,9 +214,16 @@ def upsert_review_batch():
                 
                 for row in update_batch: # for batch update, need to reformat.
                     row['n_review_id_val'] = row.pop('n_review_id')
-                    for topic in row['our_topics']:
-                        topic['reid'] = row['reid']
-                        our_topics.append(topic)
+                    for our_topic in row['our_topics']:
+                        if (our_topic.get('text') == "" 
+                            or our_topic.get('topic') == ""
+                            or our_topic.get('end_pos') == 0
+                            or our_topic.get('positive_yn') == ""                            
+                            or not our_topic.get('topic_score') 
+                            ):
+                            continue
+                        our_topic['reid'] = row['reid']                        
+                        our_topics.append(our_topic)
                         reid_set.add(row['reid'])
                 
                 db_session.connection().execute(update_stmt, update_batch) # for batch update, use connection.
@@ -219,9 +237,20 @@ def upsert_review_batch():
                 delete_stmt = delete(Topic).where(Topic.reid.in_(reid_set))
                 db_session.execute(delete_stmt)
                 
+
+                for our_topic in our_topics:                    
+                    topic_name = our_topic.get('topic')                    
+                    del our_topic['topic'] # topic name is not needed in topic table.
+                    
+                    our_topic['type'] = 'RT0' # Review Topic
+                    our_topic['topic_name'] = topic_name                    
+                    our_topic['topic_code'] = topic_name_to_code.get(topic_name) # topic name convert to topic code.
+                    if our_topic['topic_code'] == None:
+                        log_debug_msg(current_app.debug, f"[ERROR] Invalid topic name: {topic_name}", f"[ERROR] Invalid topic name")                            
+
                 # 2. insert all our_topics
                 # topic sample: 
-                # {"type":"T0", 'text': '품질이 뛰어나요', 'topic_code': 'quality', 'topic_name': '품질', 'topic_score': 1, 'start_position': 0, 'end_position': 7, 'positive_yn': 'Y', 'sentiment_scale': 2}
+                # {"type":"T0", 'text': '품질이 뛰어나요', 'topic_code': 'quality', 'topic_name': '품질', 'topic_score': 1, 'start_pos': 0, 'end_pos': 7, 'positive_yn': 'Y', 'sentiment_scale': 2}
                 for topic_batch in batch_generator(our_topics, 20): # For preventing overhead.
                     insert_stmt = insert(Topic).values(topic_batch)
                     db_session.execute(insert_stmt)    
@@ -232,7 +261,6 @@ def upsert_review_batch():
         log_debug_msg(current_app.debug, f"[SUCCESS] Insert and Update batch: {len(reviews)}", f"[SUCCESS]")    
         return custom_response(current_app.debug, f"[SUCCESS] Insert and Update batch: {len(reviews)}", f"[SUCCESS] Insert and Update batch: {len(reviews)}", 200)
         
-
     except Exception as e:
         db_session.rollback()
         return custom_response(current_app.debug, f"[ERROR] {e}", f"Fail!", 400)

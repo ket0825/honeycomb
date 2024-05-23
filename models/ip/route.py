@@ -9,7 +9,6 @@ from ..util.util import base10_to_base36, base36_to_base10, custom_response, log
 from datetime import datetime
 from sqlalchemy.orm import Mapper
 from sqlalchemy.orm import lazyload
-import re
 
 ip_route = Blueprint('ip_route', __name__)
 
@@ -17,14 +16,14 @@ ip_route = Blueprint('ip_route', __name__)
 @ip_route.route('/api/ip', methods=['GET'])
 def select_one():
     try:                
-        if request.args.get('unused') == 'true':
-            ip_address = db_session.execute(select(IP.address).where(IP.naver == 'unused')).first()
-            db_session.commit()
-            return jsonify([ip_address.address]) if ip_address else jsonify([])
+        if request.args.get('unused') == 'True':
+            res = db_session.execute(select(IP).where(IP.naver == 'unused')).first()
+            db_session.commit()            
         else:
-            ip_address = db_session.execute(select(IP)).scalars().all()
+            res = db_session.execute(select(IP)).scalars().all()
             db_session.commit()
-            return jsonify([row.to_dict() for row in ip_address])
+            
+        return jsonify([row.to_dict() for row in res])
                     
     except Exception as e:
         db_session.rollback()
@@ -80,7 +79,8 @@ def upsert_batch():
                 update_stmt = update(IP).where(IP.address==packet.get('address')).values(
                     country=packet.get('country'),
                     user_agent=packet.get('user_agent'),
-                    naver=packet.get('naver')
+                    naver=packet.get('naver'),
+                    timestamp=datetime.now(),
                 )
                 db_session.execute(update_stmt)
                 db_session.commit()

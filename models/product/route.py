@@ -1,16 +1,19 @@
 from flask import Blueprint, request, jsonify, Response, current_app
 from database import db_session, metadata_obj, engine
 
-from sqlalchemy import select, insert, update, delete, and_, or_
+from sqlalchemy import select, insert, update, delete, and_, or_, bindparam
 from sqlalchemy.dialects.mysql import insert as mysql_insert
 from sqlalchemy import Table, func
 from models.product.model import Product
 from models.product_history.model import ProductHistory
 from models.category.model import Category
+from models.topic.model import Topic
 from ..util.util import base10_to_base36, base36_to_base10, custom_response, log_debug_msg, batch_generator
 from datetime import datetime
 from sqlalchemy.orm import Mapper
 from sqlalchemy.orm import lazyload
+
+from settings import topic_name_to_code
 import re
 
 product_route = Blueprint('product_route', __name__)
@@ -24,9 +27,17 @@ def select_all(prid):
         stmt = select(Product)
         if prid:
             stmt = stmt.where(Product.prid==prid)                    
-        elif 'name' in request.args.keys():
-            name = request.args.get('name') 
-            stmt = stmt.where(Product.name==name)
+        if 'match_nv_mid' in request.args.keys():
+            match_nv_mid = request.args.get('match_nv_mid')
+            stmt = stmt.where(Product.match_nv_mid==match_nv_mid)
+                    
+        # join vs query twice
+        if 's_category' in request.args.keys():
+            s_category = request.args.get('s_category')
+            stmt = stmt.join(Category, Category.caid==Product.caid).where(Category.s_category==s_category)
+        elif 'caid' in request.args.keys():
+            caid = request.args.get('caid')
+            stmt = stmt.where(Product.caid==caid)
                         
         res = db_session.execute(stmt).scalars().all()        
         db_session.commit()
@@ -118,6 +129,7 @@ def upsert_match():
 
 @product_route.route('/api/product/detail/one', methods=['POST'])
 def update_detail_one():
+    #TODO: insert to Topic about OCR.
     """
     [SINGLE PACKET] Update product at detail page.
 
@@ -132,6 +144,7 @@ def update_detail_one():
         
         prid = packet.get('prid')
         caid = packet.get('caid')
+
         prid_validate = prid[0] == 'P' and (0 <= int(prid[1]) <= 9)
         caid_validate = caid[0] == 'C' and (0 <= int(caid[1]) <= 9)
         if not prid_validate or not caid_validate:
@@ -152,8 +165,40 @@ def update_detail_one():
             detail_image_urls=packet.get('detail_image_urls')            
         )
         db_session.execute(update_stmt)
-        
 
+        # Insert topic.
+        seller_spec = packet.get('seller_spec')
+        our_topics = []        
+        for img_spec in seller_spec:
+            # first element in img_spec is our topics.
+            if isinstance(img_spec[1], list):
+                our_topics.extend(img_spec[1])                        
+
+        if our_topics:
+            for topic in our_topics:
+                topic['prid'] = prid
+                topic_name = topic.get('topic')            
+                topic['topic_name'] = topic_name
+                topic['type'] = "OT0"
+                del topic['topic']
+
+                topic['topic_code'] = topic_name_to_code.get(topic_name)
+                if topic['topic_code'] is None:
+                    log_debug_msg(current_app.debug, f"[ERROR] Invalid topic: {topic_name}, text: {topic['text']}", f"Invalid topic")
+                    continue
+
+            
+            insert_stmt = insert(Topic).values(
+                    type=bindparam('type'),
+                    prid=bindparam('prid'),
+                    text=bindparam('text'),
+                    topic_name=bindparam('topic_name'),
+                    topic_code=bindparam('topic_code'),
+                    start_pos=bindparam('start_pos'),
+                    end_pos=bindparam('end_pos'),                    
+                )
+            db_session.execute(insert_stmt, our_topics)
+            
         # Insert history
         select_prod_hist = select(ProductHistory).where(ProductHistory.prid==prid).order_by(ProductHistory.timestamp.desc()).limit(1)
         last_hist = db_session.execute(select_prod_hist).scalar_one_or_none()
