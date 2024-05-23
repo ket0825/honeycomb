@@ -7,7 +7,11 @@ WORKDIR /app
 COPY . .
 
 # 필요한 패키지 설치
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt && \
+    if test -f env/.env; then \
+      export $(grep -v '^#' env/.env | xargs); \
+    fi
 
 # 포트 노출
 EXPOSE 5000

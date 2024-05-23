@@ -20,6 +20,13 @@ elif STAGE == 'prod':
     DB_PORT = int(os.getenv('DB_PORT'))
     DB_NAME = os.getenv('DB_NAME')
     DB_HOST = os.getenv('DB_HOST')
+elif STAGE == 'k8s':
+    DB_USER = os.getenv('K8S_DB_USER')
+    DB_PASSWORD = os.getenv('K8S_DB_PASSWORD')
+    DB_PORT = int(os.getenv('K8S_DB_PORT'))
+    DB_NAME = os.getenv('K8S_DB_NAME')
+    DB_HOST = os.getenv('K8S_DB_HOST')
+    
 
 print(f"STAGE: {STAGE}")
 print(f"DB_USER: {DB_USER}")
