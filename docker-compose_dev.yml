@@ -8,12 +8,11 @@ services:
       - path: ./env/.env
         required: true
     # 자동으로 environment 변수를 인식해줌.
-    environment:
-      - MYSQL_ROOT_PASSWORD
-      - MYSQL_DATABASE
-      - MYSQL_USER
-      - MYSQL_PASSWORD
-      - MYSQL_USER_HOST
+    # environment:
+    #   - MYSQL_ROOT_PASSWORD
+    #   - MYSQL_USER
+    #   - MYSQL_PASSWORD
+      
 
     ports:      
       - "3307:3306"
@@ -29,11 +28,11 @@ services:
       - path: ./env/.env
         required: true
     environment:
-      - DB_USER
-      - DB_PASSWORD
-      - DB_PORT
-      - DB_NAME
-      - DB_HOST=db
+      - DEV_DB_USER
+      - DEV_DB_PASSWORD
+      - DEV_DB_PORT
+      - DEV_DB_NAME
+      - DEV_DB_HOST=db
     
     restart: always
     depends_on:
