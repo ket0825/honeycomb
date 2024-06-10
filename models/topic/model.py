@@ -18,11 +18,14 @@ class Topic(Base):
     end_pos = mapped_column(Integer, nullable=False)
     positive_yn = mapped_column(CHAR(1), nullable=True) # topic sentiment (Y, N)
     sentiment_scale = mapped_column(Integer, nullable=True) # topic sentiment scale
+    bbox = mapped_column(JSON, nullable=True) # bounding box [[x1, y1], [x2, y2], [x3, y3], [x4, y4]]
+    image_number = mapped_column(Integer, nullable=True) # image number (for ocr topic)
 
     __table_args__ = (
         UniqueConstraint('type', 'id', name='uq_topic_type_id'),
         # At production level. It should be indexed.
         Index('ix_reid', 'reid'), # reid (검색 key 목적)
+        Index('ix_prid', 'prid'), # prid (검색 key 목적)
         Index('ix_topic_code', 'topic_code', 'topic_score'), # topic_code (검색 key와 점수 목적)
         Index('ix_sentiment', 'positive_yn', 'sentiment_scale')  # sentiment (검색 key와 점수 목적)
     )
@@ -32,6 +35,7 @@ class Topic(Base):
             'id': self.id,
             'type': self.type,
             'tpid': self.tpid,
+            'prid': self.prid,
             'reid': self.reid,
             'text': self.text,
             'topic_code': self.topic_code,
@@ -40,5 +44,7 @@ class Topic(Base):
             'start_pos': self.start_pos,
             'end_pos': self.end_pos,
             'positive_yn': self.positive_yn,
-            'sentiment_scale': self.sentiment_scale
+            'sentiment_scale': self.sentiment_scale,
+            'bbox': self.bbox,
+            'image_number': self.image_number
         }

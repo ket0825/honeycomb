@@ -191,6 +191,7 @@ def upsert_review_batch():
                             ):
                             continue
                         our_topic['reid'] = reid
+                        our_topic['prid'] = prid
                         our_topics.append(our_topic)                                             
 
                 db_session.commit()            
@@ -245,6 +246,7 @@ def upsert_review_batch():
                     our_topic['type'] = 'RT0' # Review Topic
                     our_topic['topic_name'] = topic_name                    
                     our_topic['topic_code'] = topic_name_to_code.get(topic_name) # topic name convert to topic code.
+                    our_topic['prid'] = prid
                     if our_topic['topic_code'] == None:
                         log_debug_msg(current_app.debug, f"[ERROR] Invalid topic name: {topic_name}", f"[ERROR] Invalid topic name")                            
 
@@ -254,8 +256,9 @@ def upsert_review_batch():
                 for topic_batch in batch_generator(our_topics, 20): # For preventing overhead.
                     insert_stmt = insert(Topic).values(topic_batch)
                     db_session.execute(insert_stmt)    
-                    db_session.commit()
                     log_debug_msg(current_app.debug, f"[SUCCESS] Insert {topic_batch[0]} to {topic_batch[-1]} batch", f"[SUCCESS] Insert {len(our_topics)} batch")
+                
+                db_session.commit()
                     
 
         log_debug_msg(current_app.debug, f"[SUCCESS] Insert and Update batch: {len(reviews)}", f"[SUCCESS]")    
