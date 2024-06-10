@@ -143,7 +143,7 @@ def update_detail_one():
         packet = request.get_json()
         
         prid = packet.get('prid')
-        caid = packet.get('caid')
+        caid = packet.get('caid')        
 
         prid_validate = prid[0] == 'P' and (0 <= int(prid[1]) <= 9)
         caid_validate = caid[0] == 'C' and (0 <= int(caid[1]) <= 9)
@@ -167,37 +167,47 @@ def update_detail_one():
         db_session.execute(update_stmt)
 
         # Insert topic.
-        seller_spec = packet.get('seller_spec')
-        our_topics = []        
-        for img_spec in seller_spec:
-            # first element in img_spec is our topics.
-            if isinstance(img_spec[1], list):
-                our_topics.extend(img_spec[1])                        
-
-        if our_topics:
-            for topic in our_topics:
-                topic['prid'] = prid
-                topic_name = topic.get('topic')            
-                topic['topic_name'] = topic_name
-                topic['type'] = "OT0"
-                del topic['topic']
-
-                topic['topic_code'] = topic_name_to_code.get(topic_name)
-                if topic['topic_code'] is None:
-                    log_debug_msg(current_app.debug, f"[ERROR] Invalid topic: {topic_name}, text: {topic['text']}", f"Invalid topic")
-                    continue
-
+        if packet.get('seller_spec'):
+            seller_spec = packet.get('seller_spec')
+            our_topics = []        
+            indices = []
+            delete_stmt = delete(Topic).where(Topic.prid == prid, Topic.type == "OT0")
+            db_session.execute(delete_stmt)
             
-            insert_stmt = insert(Topic).values(
-                    type=bindparam('type'),
-                    prid=bindparam('prid'),
-                    text=bindparam('text'),
-                    topic_name=bindparam('topic_name'),
-                    topic_code=bindparam('topic_code'),
-                    start_pos=bindparam('start_pos'),
-                    end_pos=bindparam('end_pos'),                    
-                )
-            db_session.execute(insert_stmt, our_topics)
+            for i, img_spec in enumerate(seller_spec):
+                if img_spec[0] != "": # not empty string. 나중에 OCR 쪽 손봐야 함.
+                # first element in img_spec is our topics.
+                    if isinstance(img_spec[1], list):
+                        our_topics.extend(img_spec[1])
+                        indices.extend([i]*len(img_spec[1]))                                            
+
+            if our_topics:
+                for idx, topic in zip(indices, our_topics):                    
+                    topic['prid'] = prid
+                    topic_name = topic.get('topic')            
+                    topic['topic_name'] = topic_name
+                    topic['type'] = "OT0"
+                    topic['image_number'] = idx
+                    del topic['topic']
+                    print(topic)
+
+                    topic['topic_code'] = topic_name_to_code.get(topic_name)
+                    if topic['topic_code'] is None:
+                        log_debug_msg(current_app.debug, f"[ERROR] Invalid topic: {topic_name}, text: {topic['text']}", f"Invalid topic")
+                        continue
+                
+                insert_stmt = insert(Topic).values(
+                        type=bindparam('type'),
+                        prid=bindparam('prid'),
+                        text=bindparam('text'),
+                        topic_name=bindparam('topic_name'),
+                        topic_code=bindparam('topic_code'),
+                        start_pos=bindparam('start_pos'),
+                        end_pos=bindparam('end_pos'),
+                        image_number=bindparam('image_number'),
+                        bbox=bindparam('bbox'),                    
+                    )
+                db_session.execute(insert_stmt, our_topics)
             
         # Insert history
         select_prod_hist = select(ProductHistory).where(ProductHistory.prid==prid).order_by(ProductHistory.timestamp.desc()).limit(1)
