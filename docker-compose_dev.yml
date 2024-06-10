@@ -8,8 +8,8 @@ services:
       - path: ./env/.env
         required: true
     # 자동으로 environment 변수를 인식해줌.
-    # environment:
-    #   - MYSQL_ROOT_PASSWORD
+    environment:
+      - MYSQL_ROOT_PASSWORD
     #   - MYSQL_USER
     #   - MYSQL_PASSWORD
       
