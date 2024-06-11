@@ -49,7 +49,11 @@ def select_topic_by_type():
             type = request.args.get('type')
             if type.startswith("OT"):
                 prid = request.args.get('prid')
-                stmt = select(Topic).where(Topic.prid==prid)
+                stmt = select(Topic).where(
+                and_(
+                Topic.prid==prid,
+                Topic.type==type
+                ))        
             elif type.startswith("RT"):
                 prid = request.args.get("prid")            
                 stmt = select(Topic).join(Review, Review.reid==Topic.reid).where(

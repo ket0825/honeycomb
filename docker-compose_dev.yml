@@ -12,8 +12,7 @@ services:
       - MYSQL_ROOT_PASSWORD
     #   - MYSQL_USER
     #   - MYSQL_PASSWORD
-      
-
+    
     ports:      
       - "3307:3306"
     volumes:
