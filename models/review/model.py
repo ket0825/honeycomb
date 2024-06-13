@@ -33,8 +33,8 @@ class Review(Base):
         Index('ix_prid', 'prid'),  # prid (aggregate 목적)
         # Index('ix_caid', 'caid'), # caid (aggregate 목적)
         Index('ix_reid', 'reid'), # reid (검색 key 목적)
-        # Index('n_v_review_id', 'n_review_id'), # n_review_id 조회 확인 목적.
-        # Index('ix_our_topics_yn', 'our_topics_yn'), # our_topics_yn (aggregate 목적)        
+        Index('n_v_review_id', 'n_review_id'), # n_review_id 조회 확인 목적.
+        Index('ix_our_topics_yn', 'our_topics_yn'), # our_topics_yn (aggregate 목적)        
     )
 
     def to_dict(self):
