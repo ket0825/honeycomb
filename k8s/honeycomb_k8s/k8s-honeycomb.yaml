@@ -1,33 +1,38 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: honeycomb-test-service
+  name: honeycomb-service
 spec:
   selector:
-    app: honeycomb-test
+    app: honeycomb-app
   ports:
     - protocol: "TCP"
       port: 6000
       targetPort: 5000
   type: LoadBalancer
 
+---
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: honeycomb-test-app
+  name: honeycomb-app
 spec:
   selector:
     matchLabels:
-      app: honeycomb-test
-  replicas: 5
+      app: honeycomb-app
+  replicas: 1
   template:
     metadata:
       labels:
-        app: honeycomb-test
+        app: honeycomb-app
     spec:
       containers:
-        - name: honeycomb-test
-          image: ket0825/honeycomb-test:0.1.0
+        - name: honeycomb-app
+          image: ket0825/honeycomb-app:1.0.0
+          envFrom:
+            - configMapRef:
+                name: honeycomb-config
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 5000

@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: honeycomb-config
+data:
+  STAGE: "dev"
+  DEV_DB_HOST: "mysql"
+  DEV_DB_USER: "root"
+  DEV_DB_PASSWORD: "1234"
+  DEV_DB_PORT: "3306"
+  DEV_DB_NAME: "cosmos"
