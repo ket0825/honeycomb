@@ -1,0 +1,37 @@
+# After mysql-config.yaml.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      containers:
+        - name: mysql
+          image: mysql:8.0.33
+          envFrom:
+            - configMapRef:
+                name: mysql-config
+          ports:
+            - containerPort: 3306
+              name: mysql
+          volumeMounts:
+            - name: standard
+              mountPath: /data/mysql
+      volumes:
+        - name: standard
+          persistentVolumeClaim:
+            claimName: mysql-pv-claim
+          
+
+
+  

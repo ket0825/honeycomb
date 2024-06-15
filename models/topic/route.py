@@ -145,9 +145,10 @@ def get_kano_model_data():
                 ))          
                                  
             res = db_session.execute(stmt).scalars().all()        
-            db_session.commit()
+            # db_session.commit()
 
             df = pd.DataFrame([row.to_dict() for row in res])
+
             # 카테고리 내 토픽 빈도 계산
             category_topic_df = df.groupby(['topic_code']).agg({'topic_code':'count'}).rename(columns={'topic_code':'whole_topic_count'}).reset_index()
             category_topic_counts = category_topic_df['whole_topic_count'].sum()
@@ -191,20 +192,17 @@ def get_kano_model_data():
 
             sentiment_df = sentiment_df.groupby(['topic_code']).agg({'sentiment_score':'mean'}).reset_index()
             sentiment_df['z_sentiment_score'] = (sentiment_df['sentiment_score'] - sentiment_df['sentiment_score'].mean()) / sentiment_df['sentiment_score'].std()
-            sentiment_df.drop(['sentiment_score'], axis=1, inplace=True)
+            sentiment_df['min_max_sentiment_score'] = (sentiment_df['sentiment_score'] - sentiment_df['sentiment_score'].min()) / (sentiment_df['sentiment_score'].max() - sentiment_df['sentiment_score'].min())
+            sentiment_df.drop(['sentiment_score', 'z_sentiment_score'], axis=1, inplace=True)
+
 
             kano_model_df = pd.merge(whole_topic_kano_df, sentiment_df, on='topic_code')
-            
             # kano_dict = [{'id':record['topic_code'], 
             #               "data":[{'x': record['l2_norm_tf_itf'], 'y': record['z_sentiment_score'], "size": record['whole_topic_count']}]} 
             #               for record in kano_model_df.to_dict('records')]
-
-            
-            
-            
-
+            print(kano_model_df.to_dict('records'))
             return jsonify([{'id':record['topic_code'], 
-                          "data":[{'x': record['l2_norm_tf_itf'], 'y': record['z_sentiment_score'], "size": record['whole_topic_count']}]} 
+                          "data":[{'x': record['l2_norm_tf_itf'], 'y': record['min_max_sentiment_score'], "size": record['whole_topic_count']}]} 
                           for record in kano_model_df.to_dict('records')])
   
         else:
@@ -217,3 +215,58 @@ def get_kano_model_data():
     finally:
         db_session.remove()   
 
+
+@topic_route.route('/api/topic/polarized', methods=['GET'])
+def get_polarized_data():
+    try:
+        if 'type' in request.args.keys() and 'caid' in request.args.keys():
+            type = request.args.get('type')
+            caid = request.args.get('caid')            
+            stmt = select(Topic).join(Review, Review.reid==Topic.reid).where(
+                and_(
+                Review.caid==caid,
+                Topic.type==type
+                ))          
+                                 
+            res = db_session.execute(stmt).scalars().all()        
+            # db_session.commit()
+
+            df = pd.DataFrame([row.to_dict() for row in res])
+            sentiment_df = df[['topic_code', 'positive_yn', 'sentiment_scale']]
+
+            sentiment_df['positive_coef'] = sentiment_df['positive_yn'].apply(lambda x: 1 if x == 'Y' else -1)
+            sentiment_df['sentiment_score'] = sentiment_df['positive_coef'] * sentiment_df['sentiment_scale']
+            sentiment_df.drop(['positive_yn', 'sentiment_scale', 'positive_coef'], axis=1, inplace=True)
+            sentiment_df
+            # topic_code의 빈도 계산
+            topic_counts = sentiment_df['topic_code'].value_counts()
+
+            # # topic_code의 빈도가 50 이하인 topic_code 필터링
+            low_frequency_topics = topic_counts[topic_counts <= 50].index
+
+            # # topic_code의 빈도가 50 이하인 행 제거
+            sentiment_df = sentiment_df[~sentiment_df['topic_code'].isin(low_frequency_topics)]
+            sentiment_df = sentiment_df.groupby('topic_code')['sentiment_score'].apply(list).reset_index()
+            sentiment_df['sentiment_score_std'] = sentiment_df['sentiment_score'].apply(lambda x: np.std(x))
+            sentiment_df['sentiment_score_count'] = sentiment_df['sentiment_score'].apply(lambda x: len(x))
+            sentiment_df['sentiment_score_mean'] = sentiment_df['sentiment_score'].apply(lambda x: np.mean(x))
+            sentiment_df.drop('sentiment_score', axis=1, inplace=True)                        
+            
+            return jsonify([{'id':polarized['topic_code'], 
+                             'mean': polarized['sentiment_score_mean'],
+                            'std': polarized['sentiment_score_std'],
+                            'count': polarized['sentiment_score_count']
+                          } for polarized in sorted(sentiment_df.to_dict(orient='records'),
+                                                    key=lambda x: x['sentiment_score_std'], 
+                                                    reverse=True)])
+                          
+  
+        else:
+            return custom_response(current_app.debug, f"[ERROR] No type and caid", f"Fail!", 500)
+        
+    except Exception as e:
+        db_session.rollback()
+        log_debug_msg(current_app.debug, f"[ERROR] {e}", f"Fail!")
+        return custom_response(current_app.debug, f"[ERROR] {e}", f"Fail!", 500)
+    finally:
+        db_session.remove()   
