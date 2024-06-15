@@ -1,6 +1,6 @@
 # Honeycomb
 ### Web server + logic server
-- Web server for cosmos-dashbaord UI
+- Web server for cosmos-dashbaord UI and Chrome-extensions
 - Logic server from Preview or Honeybee(Both are crawler) to MySQLDB
 - Combine with honeycomb and MySQL DB by **docker compose**.
 ---------------
@@ -10,7 +10,7 @@
 - SQLAlchemy
 - Gunicorn
 - Docker compose
-- K8s (minikube, **DEVELOPING**)
+- K8s (minikube)
 
 ----------------------------
 
@@ -50,10 +50,12 @@ https://ket0825.notion.site/API-CALL-Specification-d04379dcd2fe487bac3ef1f6e51b8
   - Connect MySQL DB and Honeycomb server
 
 -------------------------------
-- ### K8s (developing)
+
+- ### K8s
   - kubernetes manifest for Honeycomb server and MySQL DB server
 
 -------------------------------
+
 - ### Log
   - custom stdlib logger for Honeycomb server.
 
