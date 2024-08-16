@@ -17,5 +17,5 @@ RUN pip install --upgrade pip && \
 EXPOSE 5000
 
 # 애플리케이션 실행
-CMD ["sh", "-c", "python create_database.py && python create_tables.py && gunicorn --workers 4 --bind 0.0.0.0:5000 -m 007 wsgi:app"]
+CMD ["sh", "-c", "python create_database.py && python create_tables.py && gunicorn --workers 3 --bind 0.0.0.0:5000 -m 007 wsgi:app"]
 

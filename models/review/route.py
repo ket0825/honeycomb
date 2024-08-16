@@ -14,6 +14,11 @@ from sqlalchemy.orm import Mapper
 from sqlalchemy.orm import lazyload
 from settings import topic_name_to_code
 
+from common_utils.track_resources import track_usage_context
+from common_utils.explain_query import explain_query
+
+
+
 review_route = Blueprint('review_route', __name__)
 BATCH_SIZE = 20
 
@@ -48,12 +53,12 @@ def select_all(caid):
 1. Upsert product overview at the first crawling.
 2. Delete all topics with reid in reid_set and insert all our_topics.
 """
-@review_route.route('/api/review', methods=['POST'])
 #TODO: 각 packet마다 prid, caid, type 추가해야 함. 예시 packets 만들어야 함.
 #TODO: Needs packets logic.
+@review_route.route('/api/review', methods=['POST'])
 def upsert_review_batch():    
     try:
-        packets = request.get_json()
+        packets = request.get_json()        
         type = packets.get('type')
         assert type.startswith("R") and (0 <= int(type[1]) <= 9)
         
@@ -62,15 +67,22 @@ def upsert_review_batch():
         prid = packets.get('prid')
         s_category = packets.get('category')
 
-        if not prid and not s_category:
-            prid_caid_stmt = select(Product.prid, Product.caid).where(Product.match_nv_mid==match_nv_mid)
-            res = db_session.execute(prid_caid_stmt).all()
-            prid, caid = res[0]
-        elif not prid:
-            prid = db_session.execute(select(Product.prid).where(Product.match_nv_mid==match_nv_mid)).scalar()
-            caid = db_session.execute(select(Category.caid).where(Category.s_category==s_category)).scalar()
-        elif not s_category:
-            caid = db_session.execute(select(Product.caid).where(Product.prid==prid)).scalar()
+        with track_usage_context(interval=0.5):
+            if not prid and not s_category:
+                prid_caid_stmt = select(Product.prid, Product.caid).where(Product.match_nv_mid==match_nv_mid)
+                explain_query(prid_caid_stmt)
+                res = db_session.execute(prid_caid_stmt).all()
+                prid, caid = res[0]
+            elif not prid: # s_category and match_nv_mid are given.
+                prid_stmt = select(Product.prid).where(Product.match_nv_mid==match_nv_mid)
+                explain_query(prid_stmt)
+                prid = db_session.execute(prid_stmt).scalar()
+                caid_stmt = select(Category.caid).where(Category.s_category==s_category)
+                explain_query(caid_stmt)
+                caid = db_session.execute(caid_stmt).scalar()
+            elif not s_category: # prid is given.
+                caid_stmt = select(Product.caid).where(Product.prid==prid)     
+                caid = db_session.execute().scalar()
 
         reviews = []
 
@@ -266,6 +278,6 @@ def upsert_review_batch():
         
     except Exception as e:
         db_session.rollback()
-        return custom_response(current_app.debug, f"[ERROR] {e}", f"Fail!", 400)
+        return custom_response(current_app.debug, f"[ERROR] {e}", f"[ERROR] {e}", 400)
     finally:
         db_session.remove()        
