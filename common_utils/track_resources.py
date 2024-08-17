@@ -66,7 +66,7 @@ def track_usage_context(interval: float = 0.5):
         None: None
     """
 
-    start_time = time.time()
+    start_time = time.time()    
     process = psutil.Process()        
     whole_cpu = psutil.cpu_percent(interval=interval, percpu=True)
     print(f"Whole CPU: {whole_cpu}")
@@ -99,6 +99,7 @@ if __name__ == "__main__":
     
     with track_usage_context(interval=0.5):
         lst = []
-        for i in range(10**8):
-            lst.append(1)    
+        for i in range(10**6):
+            # lst.append(1)    
+            i
         
