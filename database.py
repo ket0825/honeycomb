@@ -1,3 +1,5 @@
+import logging
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
 from settings import DB_NAME, DB_PASSWORD, DB_PORT, DB_USER, DB_HOST
@@ -36,3 +38,4 @@ Base = declarative_base()
 
 def init_db():
     Base.metadata.create_all(engine)
+    logging.getLogger('sqlalchemy').setLevel(logging.ERROR) # sqlalchemy 로그 레벨을 ERROR로 설정.
