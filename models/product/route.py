@@ -148,7 +148,7 @@ def update_detail_one():
         prid_validate = prid[0] == 'P' and (0 <= int(prid[1]) <= 9)
         caid_validate = caid[0] == 'C' and (0 <= int(caid[1]) <= 9)
         if not prid_validate or not caid_validate:
-            return custom_response(current_app.debug, f"[ERROR] Invalid packet: {packet}", f"Fail!", 400)
+            return custom_response(current_app.debug, f"[ERROR] Invalid packet: {packet}", f"Fail!: {e}", 400)
 
         update_stmt = update(Product).where(
             and_(Product.prid==prid, Product.caid==caid)
@@ -170,19 +170,17 @@ def update_detail_one():
         if packet.get('seller_spec'):
             seller_spec = packet.get('seller_spec')
             our_topics = []        
-            indices = []
             delete_stmt = delete(Topic).where(Topic.prid == prid, Topic.type == "OT0")
             db_session.execute(delete_stmt)
             
-            for i, img_spec in enumerate(seller_spec):
-                if img_spec[0] != "": # not empty string. 나중에 OCR 쪽 손봐야 함.
+            for img_spec in seller_spec:                
+                if img_spec["img_str"] != "": # not empty string.
                 # first element in img_spec is our topics.
-                    if isinstance(img_spec[1], list):
-                        our_topics.extend(img_spec[1])
-                        indices.extend([i]*len(img_spec[1]))                                            
+                    if img_spec.get("our_topics"):
+                        our_topics.extend(img_spec["our_topics"])
 
             if our_topics:
-                for idx, topic in zip(indices, our_topics):                    
+                for idx, topic in enumerate(our_topics):                    
                     topic['prid'] = prid
                     topic_name = topic.get('topic')            
                     topic['topic_name'] = topic_name
@@ -231,7 +229,7 @@ def update_detail_one():
             db_session.execute(insert_stmt)
                 
         db_session.commit()
-        log_debug_msg(current_app.debug, f"Update: {packet}", f"Update")        
+        log_debug_msg(current_app.debug, f"Update: {packet}", f"Update prid: {prid}")        
         
         if data_updated:
             log_debug_msg(current_app.debug, f"Data Updated: {data_updated}", f"Data_updated: {data_updated}")
@@ -240,7 +238,7 @@ def update_detail_one():
             return custom_response(current_app.debug, f"[SUCCESS] Update packet: {packet}", f"[SUCCESS] Update packet", 201)
     except Exception as e:
         db_session.rollback()
-        return custom_response(current_app.debug, f"[ERROR] {e}", f"Fail!", 400)
+        return custom_response(current_app.debug, f"[ERROR] {e}", f"Fail!: {e}", 400)
     finally:
         db_session.remove()        
     
