@@ -3,6 +3,11 @@ from sqlalchemy.orm import mapped_column
 from database import Base
 
 class Product(Base):
+    """
+    ALTER TABLE cosmos.Product
+    ADD COLUMN update_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP AFTER detail_image_urls,
+    ADD COLUMN topic_type VARCHAR(30) NULL AFTER prid;
+    """
     __tablename__ = 'product'
     id = mapped_column(Integer, primary_key=True) # autoincrement.
     type = mapped_column(CHAR(3), nullable=False) # P.
@@ -18,9 +23,12 @@ class Product(Base):
     brand = mapped_column(VARCHAR(20), nullable=True)
     maker = mapped_column(VARCHAR(20), nullable=True)
     naver_spec = mapped_column(JSON, nullable=True) # with locations
-    seller_spec = mapped_column(JSON, nullable=True) # with locations
+    seller_spec = mapped_column(JSON, nullable=True) # with locations    
     # if seller_spec: crawler get also image_urls.
     detail_image_urls = mapped_column(JSON, nullable=True)            
+    
+    update_time = mapped_column(TIMESTAMP(timezone=True), nullable=False, default=func.now())
+    topic_type = mapped_column(VARCHAR(30), nullable=True) 
     
     __table_args__ = (
         UniqueConstraint('type', 'id', name='uq_product_type_id'),
@@ -50,5 +58,7 @@ class Product(Base):
             'naver_spec': self.naver_spec,
             "match_nv_mid": self.match_nv_mid,
             'seller_spec': self.seller_spec,
-            'detail_image_urls': self.detail_image_urls
+            'detail_image_urls': self.detail_image_urls,
+            'update_time': self.update_time,
+            'topic_type': self.topic_type,            
         }
