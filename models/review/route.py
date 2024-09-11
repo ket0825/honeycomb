@@ -102,7 +102,7 @@ def upsert_review_batch():
         prid = packets.get('prid')
         s_category = packets.get('category')
 
-        # explain query 검증 완료.
+        # explain query 검증 완료.        
         if not prid and not s_category:
             prid_caid_stmt = select(Product.prid, Product.caid).where(Product.match_nv_mid==match_nv_mid)            
             res = db_session.execute(prid_caid_stmt).all()
@@ -163,13 +163,14 @@ def upsert_review_batch():
             reviews.append(packet)
     
         # check exists.      
-        # 여기서 index 안 걸려있는거 찾음!      
+        # 여기서 index 안 걸려있는거 찾음!              
         select_stmt = select(Review.n_review_id, Review.reid) \
             .where(
                 Review.n_review_id.in_(
                     [review.get('n_review_id') for review in reviews]
                 )
-            )        
+            )          
+              
         exists = db_session.execute(select_stmt).all()
         exists = {row[0]: row[1] for row in exists} # n_review_id: reid
 

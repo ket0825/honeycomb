@@ -10,7 +10,9 @@ from sqlalchemy.orm import declarative_base
 # worker 설정 3.
 # 프로세스 단위로 하나의 engine을 만들어서 사용.
 engine = create_engine(f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}",
-                    query_cache_size=1200, pool_size=5, max_overflow=10, echo=False, pool_recycle=3600, pool_timeout=30)
+                    query_cache_size=1200, pool_size=5, max_overflow=10, echo=False, pool_recycle=3600, pool_timeout=30, 
+                    isolation_level="READ COMMITTED"
+                    )
 
 # connection pool 관련.
 """https://spoqa.github.io/2018/01/17/connection-pool-of-sqlalchemy.html"""
@@ -19,12 +21,12 @@ engine = create_engine(f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_P
 # Session이 실제로 요청을 보내는 시점에 연결을 시도함! : Note that the Engine and its underlying Pool do not establish the first actual DBAPI connection until the Engine.connect() or Engine.begin() methods are called. Either of these methods may also be invoked by other SQLAlchemy Engine dependent objects such as the ORM Session object when they first require database connectivity. In this way, Engine and Pool can be said to have a lazy initialization behavior.
 
 
-# scoped_session을 이용하여 thread마다 session을 생성.
+# scoped_session을 이용하여 thread마다 session을 생성. 아래는 transaction 단위와 같음.
 db_session = scoped_session(
     sessionmaker(
         autocommit=False,                                         
         autoflush=False,
-        expire_on_commit=False,
+        expire_on_commit=True,
         bind=engine
         )
     )
