@@ -49,7 +49,7 @@ def select_all(prid):
         
     except Exception as e:
         db_session.rollback()
-        return custom_response(current_app.debug, f"[ERROR] {e}", f"Fail!", 500)
+        return custom_response(current_app.debug, f"[ERROR] {e}", f"[ERROR] {e}", 500)
     finally:
         db_session.remove()            
 
@@ -78,7 +78,7 @@ def upsert_match():
                 or not isinstance(packet.get('lowest_price'), int)
                 or not isinstance(packet.get('match_nv_mid'), str)
             ):
-                log_debug_msg(current_app.debug, f"Invalid packet: {packet}", f"Invalid packet")
+                log_debug_msg(current_app.debug, f"Invalid packet: {packet}", f"Invalid packet: {packet}")
                 continue            
             
             packet['caid'] = caid
@@ -103,7 +103,7 @@ def upsert_match():
                         )
                 db_session.execute(update_stmt)
                 db_session.commit()
-                log_debug_msg(current_app.debug, f"Update: {packet}", f"Update")
+                log_debug_msg(current_app.debug, f"Update: {packet}", f"Update: {packet}")
             else:                          
                 insert_stmt = insert(Product).values(packet)
                 result = db_session.execute(insert_stmt)
@@ -113,16 +113,16 @@ def upsert_match():
                     update_prid = update(Product).where(Product.id==inserted_ids[0]).values(prid=prid)
                     db_session.execute(update_prid)
                     db_session.commit()
-                    log_debug_msg(current_app.debug, f"Insert: {packet}", f"Insert")
+                    log_debug_msg(current_app.debug, f"Insert: {packet}", f"Insert: {packet}")
                 else:
                     db_session.rollback()
-                    log_debug_msg(current_app.debug, f"Fail to insert: {packet}", f"Fail to insert")                                               
+                    log_debug_msg(current_app.debug, f"Fail to insert: {packet}", f"Fail to insert: {packet}")                                               
         
         return custom_response(current_app.debug, f"[SUCCESS] Success!", f"Success!", 200)
 
     except Exception as e:
         db_session.rollback()
-        return custom_response(current_app.debug, f"[ERROR] {e}", f"Fail!", 400)
+        return custom_response(current_app.debug, f"[ERROR] {e}", f"Fail!: {e}", 400)
     finally:
         db_session.remove()        
     
@@ -191,7 +191,7 @@ def update_detail_one():
 
                     topic['topic_code'] = topic_name_to_code.get(topic_name)
                     if topic['topic_code'] is None:
-                        log_debug_msg(current_app.debug, f"[ERROR] Invalid topic: {topic_name}, text: {topic['text']}", f"Invalid topic")
+                        log_debug_msg(current_app.debug, f"[ERROR] Invalid topic: {topic_name}, text: {topic['text']}", f"Invalid topic: {topic_name}, text: {topic['text']}")
                         continue
                 
                 insert_stmt = insert(Topic).values(

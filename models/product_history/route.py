@@ -36,7 +36,7 @@ def select_product_history():
         
     except Exception as e:
         db_session.rollback()
-        log_debug_msg(current_app.debug, f"[ERROR] {e}", f"Fail!")
-        return custom_response(current_app.debug, f"[ERROR] {e}", f"Fail!", 500)
+        log_debug_msg(current_app.debug, f"[ERROR] {e}", f"[ERROR] {e}")
+        return custom_response(current_app.debug, f"[ERROR] {e}", f"Fail!: {e}", 500)
     finally:
         db_session.remove()            
