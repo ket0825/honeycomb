@@ -126,8 +126,8 @@ def select_topic_by_type():
         
     except Exception as e:
         db_session.rollback()
-        log_debug_msg(current_app.debug, f"[ERROR] {e}", f"Fail!")
-        return custom_response(current_app.debug, f"[ERROR] {e}", f"Fail!", 500)
+        log_debug_msg(current_app.debug, f"[ERROR] {e}", f"[ERROR] {e}")
+        return custom_response(current_app.debug, f"[ERROR] {e}", f"[ERROR] {e}", 500)
     finally:
         db_session.remove()   
 
@@ -206,12 +206,12 @@ def get_kano_model_data():
                           for record in kano_model_df.to_dict('records')])
   
         else:
-            return custom_response(current_app.debug, f"[ERROR] No type and caid", f"Fail!", 500)
+            return custom_response(current_app.debug, f"[ERROR] No type and caid", f"[ERROR] No type and caid", 500)
         
     except Exception as e:
         db_session.rollback()
-        log_debug_msg(current_app.debug, f"[ERROR] {e}", f"Fail!")
-        return custom_response(current_app.debug, f"[ERROR] {e}", f"Fail!", 500)
+        log_debug_msg(current_app.debug, f"[ERROR] {e}", f"[ERROR] {e}")
+        return custom_response(current_app.debug, f"[ERROR] {e}", f"[ERROR] {e}", 500)
     finally:
         db_session.remove()   
 
@@ -262,11 +262,11 @@ def get_polarized_data():
                           
   
         else:
-            return custom_response(current_app.debug, f"[ERROR] No type and caid", f"Fail!", 500)
+            return custom_response(current_app.debug, f"[ERROR] No type and caid", f"[ERROR] No type and caid", 500)
         
     except Exception as e:
         db_session.rollback()
-        log_debug_msg(current_app.debug, f"[ERROR] {e}", f"Fail!")
-        return custom_response(current_app.debug, f"[ERROR] {e}", f"Fail!", 500)
+        log_debug_msg(current_app.debug, f"[ERROR] {e}", f"[ERROR] {e}")
+        return custom_response(current_app.debug, f"[ERROR] {e}", f"[ERROR] {e}", 500)
     finally:
         db_session.remove()   

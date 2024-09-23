@@ -45,8 +45,8 @@ def select_all(caid):
         
     except Exception as e:
         db_session.rollback()
-        log_debug_msg(current_app.debug, f"[ERROR] {e}", f"Fail!")
-        return custom_response(current_app.debug, f"[ERROR] {e}", f"Fail!", 500)
+        log_debug_msg(current_app.debug, f"[ERROR] {e}", f"[ERROR] {e}")
+        return custom_response(current_app.debug, f"[ERROR] {e}", f"Fail!: {e}", 500)
     finally:
         db_session.remove()            
 
@@ -131,7 +131,7 @@ def upsert_review_batch():
                 or not isinstance(review.get('qualityScore'), (float, int))
                 or not isinstance(review.get('starScore'), int) 
             ):
-                log_debug_msg(current_app.debug, f"Invalid packet: {review}", f"Invalid packet")
+                log_debug_msg(current_app.debug, f"Invalid packet: {review}", f"Invalid packet: {review}")
                 continue            
             # packet reformatting. Later, it will be used for insert.
             # TODO: crawler should provide these fields.
@@ -309,7 +309,7 @@ def upsert_review_batch():
                     our_topic['topic_code'] = topic_name_to_code.get(topic_name) # topic name convert to topic code.
                     our_topic['prid'] = prid
                     if our_topic['topic_code'] == None:
-                        log_debug_msg(current_app.debug, f"[ERROR] Invalid topic name: {topic_name}", f"[ERROR] Invalid topic name")                            
+                        log_debug_msg(current_app.debug, f"[ERROR] Invalid topic name: {topic_name}", f"[ERROR] Invalid topic name: {topic_name}")                            
 
                 # 2. insert all our_topics
                 # topic sample: 

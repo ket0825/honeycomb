@@ -89,7 +89,7 @@ def upsert_batch():
 
     except Exception as e:
         db_session.rollback()
-        return custom_response(current_app.debug, f"[ERROR] {e}", f"Fail!", 400)
+        return custom_response(current_app.debug, f"[ERROR] {e}", f"Fail! {e}", 400)
     finally:
         db_session.remove()        
 
@@ -107,7 +107,7 @@ def delete_one(address):
             return custom_response(current_app.debug, f"[SUCCESS] Deleted ip_address: {address}", f"[SUCCESS] Deleted", 200)
     except Exception as e:
         db_session.rollback()
-        return custom_response(current_app.debug, f"[ERROR] {e}", f"Fail!", 400)
+        return custom_response(current_app.debug, f"[ERROR] {e}", f"Fail!: {e}", 400)
     finally:
         db_session.remove()
 
