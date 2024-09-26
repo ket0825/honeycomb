@@ -166,33 +166,35 @@ def update_detail_one():
         )
         db_session.execute(update_stmt)
 
-        # Insert topic.
+        # Insert topic. (Real time predict 기준. Topic을 바로 삭제함.)
         if packet.get('seller_spec'):
             seller_spec = packet.get('seller_spec')
-            our_topics = []        
-            delete_stmt = delete(Topic).where(Topic.prid == prid, Topic.type == "OT0")
-            db_session.execute(delete_stmt)
+            our_topics = []                    
             
             for img_spec in seller_spec:                
                 if img_spec["img_str"] != "": # not empty string.
                 # first element in img_spec is our topics.
                     if img_spec.get("our_topics"):
-                        our_topics.extend(img_spec["our_topics"])
+                        our_topics.append(img_spec["our_topics"])
 
             if our_topics:
-                for idx, topic in enumerate(our_topics):                    
-                    topic['prid'] = prid
-                    topic_name = topic.get('topic')            
-                    topic['topic_name'] = topic_name
-                    topic['type'] = "OT0"
-                    topic['image_number'] = idx
-                    del topic['topic']
-                    print(topic)
+                for idx, image_topics in enumerate(our_topics):                    
+                    for topic in image_topics:
+                        topic['prid'] = prid
+                        topic_name = topic.get('topic')            
+                        topic['topic_name'] = topic_name
+                        topic['type'] = "OT0"
+                        topic['image_number'] = idx
+                        del topic['topic']
+                        print(topic)
 
-                    topic['topic_code'] = topic_name_to_code.get(topic_name)
-                    if topic['topic_code'] is None:
-                        log_debug_msg(current_app.debug, f"[ERROR] Invalid topic: {topic_name}, text: {topic['text']}", f"Invalid topic: {topic_name}, text: {topic['text']}")
-                        continue
+                        topic['topic_code'] = topic_name_to_code.get(topic_name)
+                        if topic['topic_code'] is None: # 알려만 주고 넘어감.
+                            log_debug_msg(current_app.debug, f"[ERROR] Invalid topic: {topic_name}, text: {topic['text']}", f"Invalid topic: {topic_name}, text: {topic['text']}")
+                            continue
+                    
+                delete_stmt = delete(Topic).where(Topic.prid == prid, Topic.type == "OT0")
+                db_session.execute(delete_stmt)
                 
                 insert_stmt = insert(Topic).values(
                         type=bindparam('type'),
