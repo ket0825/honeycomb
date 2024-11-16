@@ -1,3 +1,5 @@
+import traceback
+
 from flask import Blueprint, request, jsonify, Response, current_app
 from database import db_session, metadata_obj, engine
 
@@ -107,15 +109,17 @@ def upsert_review_batch():
             prid_caid_stmt = select(Product.prid, Product.caid).where(Product.match_nv_mid==match_nv_mid)            
             res = db_session.execute(prid_caid_stmt).all()
             prid, caid = res[0]
-        elif not prid: # s_category and match_nv_mid are given.
+        elif prid: # prid is given.
+            caid_stmt = select(Product.caid).where(Product.prid==prid)     
+            caid = db_session.execute(caid_stmt).scalar()
+        elif s_category: # s_category and match_nv_mid are given.
             prid_stmt = select(Product.prid).where(Product.match_nv_mid==match_nv_mid)            
             prid = db_session.execute(prid_stmt).scalar()
             caid_stmt = select(Category.caid).where(Category.s_category==s_category)            
             caid = db_session.execute(caid_stmt).scalar()
-        elif not s_category: # prid is given.
-            caid_stmt = select(Product.caid).where(Product.prid==prid)     
-            caid = db_session.execute().scalar()
-
+        else:
+            raise Exception(f"Invalid input: {prid}, {s_category}, {match_nv_mid}")
+            
         reviews = []
 
         # 체크 완료.
@@ -313,7 +317,7 @@ def upsert_review_batch():
 
                 # 2. insert all our_topics
                 # topic sample: 
-                # {"type":"T0", 'text': '품질이 뛰어나요', 'topic_code': 'quality', 'topic_name': '품질', 'topic_score': 1, 'start_pos': 0, 'end_pos': 7, 'positive_yn': 'Y', 'sentiment_scale': 2}
+                # {"type":"RT0", 'text': '품질이 뛰어나요', 'topic_code': 'quality', 'topic_name': '품질', 'topic_score': 1, 'start_pos': 0, 'end_pos': 7, 'positive_yn': 'Y', 'sentiment_scale': 2}
                 for topic_batch in batch_generator(our_topics, 20): # For preventing overhead.
                     insert_stmt = insert(Topic).values(topic_batch)
                     db_session.execute(insert_stmt)    
@@ -327,6 +331,8 @@ def upsert_review_batch():
         
     except Exception as e:
         db_session.rollback()
-        return custom_response(current_app.debug, f"[ERROR] {e}", f"[ERROR] {e}", 400)
+        tb = traceback.format_exc()
+        log_debug_msg(current_app.debug, f"[ERROR] {tb}", f"[ERROR] {tb}")
+        return custom_response(current_app.debug, f"[ERROR] {tb}", f"[ERROR] {e}", 400)
     finally:
         db_session.remove()        

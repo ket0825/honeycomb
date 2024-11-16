@@ -1,6 +1,7 @@
 from sqlalchemy import Integer, CHAR, VARCHAR, TIMESTAMP, FLOAT, JSON, UniqueConstraint, Index
 from sqlalchemy.orm import mapped_column
 from database import Base
+from sqlalchemy.sql import func
 
 
 # TODO: drop columns...
@@ -40,14 +41,14 @@ class Review(Base):
     match_nv_mid = mapped_column(VARCHAR(30), nullable=False)    
     nv_mid = mapped_column(VARCHAR(30), nullable=False)
     image_urls = mapped_column(JSON, nullable=False)
-    update_time = mapped_column(TIMESTAMP(timezone=True), nullable=False)
+    update_time = mapped_column(TIMESTAMP(timezone=True), nullable=False, default=func.now())
     topic_type = mapped_column(VARCHAR(30), nullable=True)
     
 
     __table_args__ = (
         UniqueConstraint('type', 'id', name='uq_review_type_id'),
         Index('ix_prid', 'prid'),  # prid (aggregate 목적)
-        # Index('ix_caid', 'caid'), # caid (aggregate 목적)
+        Index('ix_caid', 'caid'), # caid (aggregate 목적)
         UniqueConstraint('reid', name='ix_reid'), # reid (검색 key 목적)  Index보다 UniqueConstraint가 더 빠름.      
         Index('ix_n_review_id', 'n_review_id'), # n_review_id 조회 확인 목적. 이거 왜 안만들어지는지는 모르겠음.  
     )
