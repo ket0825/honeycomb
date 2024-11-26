@@ -14,12 +14,20 @@ services:
       - MYSQL_USER
       - MYSQL_PASSWORD
       - MYSQL_USER_HOST
+      - TZ=Asia/Seoul
+      - LANG=C.UTF-8
+    command: 
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --skip-character-set-client-handshake
+      - --init-connect='SET NAMES utf8mb4'
 
     ports:      
       - "3307:3306"
     volumes:
       - db-data:/var/lib/mysql
       - db-logs:/var/log/mysql
+      - ./mysql-custom.cnf:/etc/mysql/conf.d/mysql-custom.cnf
 
   app:
     build: .
