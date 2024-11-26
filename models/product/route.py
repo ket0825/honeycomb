@@ -15,6 +15,7 @@ from sqlalchemy.orm import lazyload
 
 from settings import topic_name_to_code
 import re
+import traceback
 
 product_route = Blueprint('product_route', __name__)
 
@@ -240,7 +241,9 @@ def update_detail_one():
             return custom_response(current_app.debug, f"[SUCCESS] Update packet: {packet}", f"[SUCCESS] Update packet", 201)
     except Exception as e:
         db_session.rollback()
-        return custom_response(current_app.debug, f"[ERROR] {e}", f"Fail!: {e}", 400)
+        trace = traceback.format_exc()
+        log_debug_msg(current_app.debug, f"[ERROR] {e}", f"[ERROR] {trace}")
+        return custom_response(current_app.debug, f"[ERROR] {e}", f"[ERROR] {trace}", 400)
     finally:
         db_session.remove()        
     
